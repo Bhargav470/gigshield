@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GigShield — My Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #050507;
+  --surf: rgba(255,255,255,0.04);
+  --surf2: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --amber: #F59E0B;
+  --amber-glow: rgba(245,158,11,0.15);
+  --text: #F0F0F2;
+  --text-muted: #6B6B7B;
+  --green: #10B981;
+  --red: #EF4444;
+  --blue: #3B82F6;
+}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--amber);border-radius:4px;}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.bg-image {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%; z-index: 0;
+  background-image: url('https://images.unsplash.com/photo-1526367790999-0150786686a2?w=1920&q=80');
+  background-size: cover; background-position: center;
+  filter: blur(3px) brightness(0.1);
+  transform: scale(1.05);
+}
+
+.bg-mesh {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 10%, rgba(245,158,11,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 90% 90%, rgba(16,185,129,0.04) 0%, transparent 60%);
+}
+
+nav {
+  padding: 16px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,5,7,0.7);
+  backdrop-filter: blur(20px);
+  position: sticky; top: 0; z-index: 100;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+.logo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{box-shadow:0 0 8px var(--amber);}
+  50%{box-shadow:0 0 20px var(--amber),0 0 40px rgba(245,158,11,0.3);}
+}
+.logo span { color: var(--amber); }
+.nav-right { display: flex; align-items: center; gap: 16px; }
+.worker-name { font-size: 14px; color: var(--text-muted); }
+.logout-btn {
+  font-size: 13px; color: var(--text-muted);
+  cursor: pointer; background: none; border: none;
+  transition: color 0.2s;
+}
+.logout-btn:hover { color: var(--red); }
+
+.container {
+  max-width: 1000px; margin: 0 auto;
+  padding: 40px 24px;
+  position: relative; z-index: 1;
+}
+
+.greeting { margin-bottom: 32px; animation: fadeInUp 0.6s ease both; }
+.greeting h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 800;
+}
+.greeting p { color: var(--text-muted); font-size: 15px; margin-top: 6px; }
+
+@keyframes fadeInUp {
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.alert-banner {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: none;
+  align-items: center; gap: 12px;
+  margin-bottom: 28px;
+  backdrop-filter: blur(10px);
+  animation: fadeInUp 0.5s ease both;
+}
+.alert-banner.show { display: flex; }
+.alert-icon { font-size: 20px; }
+.alert-text { font-size: 14px; line-height: 1.5; }
+.alert-text strong { color: var(--red); }
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px; margin-bottom: 28px;
+}
+
+.stat-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 24px;
+  backdrop-filter: blur(16px);
+  transition: all 0.3s;
+  position: relative; overflow: hidden;
+  animation: fadeInUp 0.6s ease both;
+}
+.stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(245,158,11,0.4), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.stat-card:hover {
+  border-color: rgba(245,158,11,0.2);
+  background: var(--surf2);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+}
+.stat-card:hover::before { opacity: 1; }
+
+.stat-label {
+  font-size: 11px; color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+.stat-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 700;
+}
+.stat-value.amber { color: var(--amber); }
+.stat-value.green { color: var(--green); }
+.stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::before {
+  content: '';
+  width: 3px; height: 18px;
+  background: var(--amber);
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.policy-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(16px);
+  transition: all 0.3s;
+}
+.policy-card:hover {
+  border-color: rgba(245,158,11,0.15);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+}
+
+.policy-header {
+  display: flex; justify-content: space-between;
+  align-items: center; margin-bottom: 20px;
+}
+.policy-title {
+  font-family: 'Syne', sans-serif; font-size: 18px;
+}
+.status-badge {
+  background: rgba(16,185,129,0.12);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,0.2);
+  font-size: 12px; padding: 4px 14px;
+  border-radius: 999px; font-weight: 500;
+}
+
+.policy-row {
+  display: flex; justify-content: space-between;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.policy-row .key { color: var(--text-muted); }
+.policy-row .val { font-weight: 500; }
+.policy-row .val.green { color: var(--green); }
+.policy-row .val.amber { color: var(--amber); }
+
+.triggers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px; margin-bottom: 28px;
+}
+
+.trigger-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  backdrop-filter: blur(16px);
+  transition: all 0.3s;
+}
+.trigger-card:hover {
+  border-color: var(--border2);
+  background: var(--surf2);
+  transform: translateY(-2px);
+}
+
+.trigger-icon { font-size: 32px; margin-bottom: 10px; }
+.trigger-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.trigger-threshold { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+.trigger-status {
+  font-size: 12px; padding: 4px 12px;
+  border-radius: 999px; display: inline-block;
+}
+.status-safe { background: rgba(16,185,129,0.12); color: var(--green); }
+.status-warning { background: rgba(245,158,11,0.12); color: var(--amber); }
+.status-danger { background: rgba(239,68,68,0.12); color: var(--red); }
+
+.claim-section {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+  backdrop-filter: blur(16px);
+  position: relative; overflow: hidden;
+  transition: all 0.3s;
+}
+.claim-section::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, var(--amber), transparent);
+}
+.claim-section h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; margin-bottom: 8px;
+}
+.claim-section p {
+  color: var(--text-muted); font-size: 14px;
+  margin-bottom: 24px; line-height: 1.6;
+}
+
+.btn-demo {
+  background: var(--amber); color: #000;
+  border: none; padding: 14px 32px;
+  border-radius: 12px; font-size: 15px;
+  font-weight: 600; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.btn-demo::after {
+  content: ''; position: absolute;
+  top: 50%; left: 50%; width: 0; height: 0;
+  background: rgba(255,255,255,0.25); border-radius: 50%;
+  transform: translate(-50%,-50%);
+  transition: width 0.5s, height 0.5s;
+}
+.btn-demo:hover::after { width: 300px; height: 300px; }
+.btn-demo:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245,158,11,0.4);
+}
+
+.history-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 18px; padding: 28px;
+  backdrop-filter: blur(16px);
+}
+.history-empty {
+  text-align: center; color: var(--text-muted);
+  font-size: 14px; padding: 20px 0;
+}
+.payout-item {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 14px 0;
+  border-top: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.payout-item:hover { padding-left: 8px; }
+.payout-left { display: flex; align-items: center; gap: 12px; }
+.payout-icon { font-size: 20px; }
+.payout-reason { font-size: 14px; font-weight: 500; }
+.payout-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.payout-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 700; color: var(--green);
+}
+  </style>
+</head>
+<body>
+  <div class="bg-image"></div>
+<div class="bg-mesh"></div>
+
+  <nav>
+    <div class="logo">Gig<span>Shield</span></div>
+    <div class="nav-right">
+      <span class="worker-name" id="navName">Loading...</span>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- GREETING -->
+    <div class="greeting">
+      <h1 id="greetingText">Welcome back! 👋</h1>
+      <p id="greetingDate"></p>
+    </div>
+
+    <!-- ALERT BANNER -->
+    <div class="alert-banner" id="alertBanner">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-text" id="alertText"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Weekly Premium</div>
+        <div class="stat-value amber">₹<span id="statPremium">--</span></div>
+        <div class="stat-sub">Auto-renews Monday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Coverage This Week</div>
+        <div class="stat-value green">₹<span id="statCoverage">--</span></div>
+        <div class="stat-sub">Income protected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Payouts Received</div>
+        <div class="stat-value green">₹<span id="statPayouts">0</span></div>
+        <div class="stat-sub">Since joining</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Policy Status</div>
+        <div class="stat-value green" style="font-size:20px; margin-top: 4px;">Active ✓</div>
+        <div class="stat-sub" id="statZone">--</div>
+      </div>
+    </div>
+
+    <!-- POLICY DETAILS -->
+    <h2 class="section-title">Your Policy</h2>
+    <div class="policy-card">
+      <div class="policy-header">
+        <div class="policy-title">Weekly Income Protection</div>
+        <div class="status-badge">● Active</div>
+      </div>
+      <div class="policy-row"><span class="key">Worker Name</span><span class="val" id="pName">--</span></div>
+      <div class="policy-row"><span class="key">Platform</span><span class="val" id="pPlatform">--</span></div>
+      <div class="policy-row"><span class="key">Zone</span><span class="val" id="pZone">--</span></div>
+      <div class="policy-row"><span class="key">Risk Level</span><span class="val" id="pRisk">--</span></div>
+      <div class="policy-row"><span class="key">Coverage Scope</span><span class="val">Loss of income only</span></div>
+      <div class="policy-row"><span class="key">Excluded</span><span class="val">Health, vehicle, accidents</span></div>
+      <div class="policy-row"><span class="key">Payout Method</span><span class="val green">UPI — instant transfer</span></div>
+    </div>
+
+    <!-- DISRUPTION TRIGGERS -->
+    <h2 class="section-title">Live Disruption Monitors</h2>
+    <div class="triggers-grid">
+      <div class="trigger-card">
+        <div class="trigger-icon">🌧️</div>
+        <div class="trigger-name">Heavy Rainfall</div>
+        <div class="trigger-threshold">Triggers at &gt;25mm/day</div>
+        <div class="trigger-status status-safe" id="t1">Safe</div>
+      </div>
+      <div class="trigger-card">
+        <div class="trigger-icon">🌡️</div>
+        <div class="trigger-name">Extreme Heat</div>
+        <div class="trigger-threshold">Triggers at &gt;42°C</div>
+        <div class="trigger-status status-safe" id="t2">Safe</div>
+      </div>
+      <div class="trigger-card">
+        <div class="trigger-icon">💨</div>
+        <div class="trigger-name">Severe Pollution</div>
+        <div class="trigger-threshold">Triggers at AQI &gt;300</div>
+        <div class="trigger-status status-safe" id="t3">Safe</div>
+      </div>
+      <div class="trigger-card">
+        <div class="trigger-icon">🚫</div>
+        <div class="trigger-name">Zone Closure</div>
+        <div class="trigger-threshold">Curfew / Strike</div>
+        <div class="trigger-status status-safe" id="t4">Safe</div>
+      </div>
+    </div>
+
+    <!-- DEMO CLAIM TRIGGER -->
+    <div class="claim-section">
+      <h3>🧪 Simulate a Disruption</h3>
+      <p>This demo shows how GigShield automatically detects a disruption<br/>and processes your payout — without you doing anything.</p>
+      <button class="btn-demo" onclick="window.location.href='claim.html'">
+        Trigger Demo Disruption →
+      </button>
+    </div>
+
+    <!-- PAYOUT HISTORY -->
+    <h2 class="section-title">Payout History</h2>
+    <div class="history-card">
+      <div id="payoutHistory">
+        <div class="history-empty">No payouts yet — your coverage is active and monitoring!</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Load worker data from localStorage
+   const API = 'http://localhost:3001';
+const worker = JSON.parse(localStorage.getItem('gigshield_worker'));
+
+if (!worker) {
+  window.location.href = 'onboarding.html';
+} else {
+
+  // Greeting
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('greetingText').textContent = `${greet}, ${worker.name.split(' ')[0]}! 👋`;
+
+  const now = new Date();
+  document.getElementById('greetingDate').textContent =
+    now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Nav
+  document.getElementById('navName').textContent = worker.name;
+
+  // Stats
+  document.getElementById('statPremium').textContent = worker.premium;
+  document.getElementById('statCoverage').textContent = worker.coverage.toLocaleString('en-IN');
+  document.getElementById('statZone').textContent = worker.zone + ', Chennai';
+
+  // Policy details
+  document.getElementById('pName').textContent = worker.name;
+  document.getElementById('pPlatform').textContent = worker.platform.charAt(0).toUpperCase() + worker.platform.slice(1);
+  document.getElementById('pZone').textContent = worker.zone + ', Chennai';
+  const riskColors = { high: '#EF4444', medium: '#F59E0B', low: '#10B981' };
+  document.getElementById('pRisk').textContent = worker.risk.charAt(0).toUpperCase() + worker.risk.slice(1);
+  document.getElementById('pRisk').style.color = riskColors[worker.risk];
+
+  // Alert agar high risk zone
+  if (worker.risk === 'high') {
+    document.getElementById('alertBanner').classList.add('show');
+    document.getElementById('alertText').innerHTML =
+      `<strong>High Risk Zone Alert:</strong> ${worker.zone} has historically high rainfall and flood risk. Your coverage is active and monitoring 24/7.`;
+  }
+
+  // ML model se live disruption check
+  async function checkLiveDisruptions() {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const res = await fetch(`${API}/api/check-trigger`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zone: worker.zone, date: today })
+      });
+      const data = await res.json();
+
+      if (data.insurance_trigger) {
+        // Rain trigger
+        document.getElementById('t1').textContent = '🔴 TRIGGERED';
+        document.getElementById('t1').className = 'trigger-status status-danger';
+        // Show alert banner
+        document.getElementById('alertBanner').classList.add('show');
+        document.getElementById('alertText').innerHTML =
+          `⚠️ <strong>Disruption Detected:</strong> ${data.trigger_reason} in ${worker.zone} today. Auto-claim processing...`;
+      }
+
+      // Update trigger tiles based on month
+      const month = new Date().getMonth() + 1;
+      if (month >= 10 && month <= 12) {
+        document.getElementById('t1').textContent = '⚠️ High Risk';
+        document.getElementById('t1').className = 'trigger-status status-warning';
+      }
+
+    } catch (err) {
+      console.log('Model check failed — using defaults');
+    }
+  }
+
+  checkLiveDisruptions();
+
+  // Payout history
+  const payouts = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');
+  if (payouts.length > 0) {
+    let total = 0;
+    let html = '';
+    payouts.forEach(p => {
+      total += p.amount;
+      html += `
+        <div class="payout-item">
+          <div class="payout-left">
+            <div class="payout-icon">${p.icon}</div>
+            <div>
+              <div class="payout-reason">${p.reason}</div>
+              <div class="payout-date">${p.date}</div>
+            </div>
+          </div>
+          <div class="payout-amount">+₹${p.amount}</div>
+        </div>
+      `;
+    });
+    document.getElementById('payoutHistory').innerHTML = html;
+    document.getElementById('statPayouts').textContent = total.toLocaleString('en-IN');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('gigshield_worker');
+  localStorage.removeItem('gigshield_payouts');
+  window.location.href = 'index.html';
+}
+
+    if (!worker) {
+      window.location.href = 'onboarding.html';
+    } else {
+      // Greeting
+      const hour = new Date().getHours();
+      const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      document.getElementById('greetingText').textContent = `${greet}, ${worker.name.split(' ')[0]}! 👋`;
+
+      const now = new Date();
+      document.getElementById('greetingDate').textContent =
+        now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Nav
+      document.getElementById('navName').textContent = worker.name;
+
+      // Stats
+      document.getElementById('statPremium').textContent = worker.premium;
+      document.getElementById('statCoverage').textContent = worker.coverage.toLocaleString('en-IN');
+      document.getElementById('statZone').textContent = worker.zone + ', Chennai';
+
+      // Policy details
+      document.getElementById('pName').textContent = worker.name;
+      document.getElementById('pPlatform').textContent = worker.platform.charAt(0).toUpperCase() + worker.platform.slice(1);
+      document.getElementById('pZone').textContent = worker.zone + ', Chennai';
+      const riskColors = { high: '#EF4444', medium: '#F59E0B', low: '#10B981' };
+      document.getElementById('pRisk').textContent = worker.risk.charAt(0).toUpperCase() + worker.risk.slice(1);
+      document.getElementById('pRisk').style.color = riskColors[worker.risk];
+
+      // Show alert if high risk zone
+      if (worker.risk === 'high') {
+        document.getElementById('alertBanner').classList.add('show');
+        document.getElementById('alertText').innerHTML =
+          `<strong>High Risk Zone Alert:</strong> ${worker.zone} has historically high rainfall and flood risk. Your coverage is active and monitoring 24/7.`;
+      }
+
+      // Load payout history
+      const payouts = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');
+      if (payouts.length > 0) {
+        let total = 0;
+        let html = '';
+        payouts.forEach(p => {
+          total += p.amount;
+          html += `
+            <div class="payout-item">
+              <div class="payout-left">
+                <div class="payout-icon">${p.icon}</div>
+                <div>
+                  <div class="payout-reason">${p.reason}</div>
+                  <div class="payout-date">${p.date}</div>
+                </div>
+              </div>
+              <div class="payout-amount">+₹${p.amount}</div>
+            </div>
+          `;
+        });
+        document.getElementById('payoutHistory').innerHTML = html;
+        document.getElementById('statPayouts').textContent = total.toLocaleString('en-IN');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('gigshield_worker');
+      window.location.href = 'index.html';
+    }
+  </script>
+
+</body>
+</html>

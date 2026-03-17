@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GigShield — Disruption Detected</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #050507;
+  --surf: rgba(255,255,255,0.04);
+  --surf2: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --amber: #F59E0B;
+  --amber-glow: rgba(245,158,11,0.15);
+  --text: #F0F0F2;
+  --text-muted: #6B6B7B;
+  --green: #10B981;
+  --red: #EF4444;
+}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--amber);border-radius:4px;}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.bg-image {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%; z-index: 0;
+  background-image: url('https://images.unsplash.com/photo-1526367790999-0150786686a2?w=1920&q=80');
+  background-size: cover; background-position: center;
+  filter: blur(3px) brightness(0.1);
+  transform: scale(1.05);
+}
+
+.bg-mesh {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(245,158,11,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 80%, rgba(239,68,68,0.04) 0%, transparent 60%);
+}
+
+nav {
+  padding: 16px 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,5,7,0.7);
+  backdrop-filter: blur(20px);
+  position: sticky; top: 0; z-index: 100;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+.logo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{box-shadow:0 0 8px var(--amber);}
+  50%{box-shadow:0 0 20px var(--amber),0 0 40px rgba(245,158,11,0.3);}
+}
+.logo span { color: var(--amber); }
+.back-btn {
+  color: var(--text-muted); text-decoration: none;
+  font-size: 14px; cursor: pointer;
+  background: none; border: none;
+  transition: color 0.2s;
+}
+.back-btn:hover { color: var(--text); }
+
+.container {
+  max-width: 600px; margin: 0 auto;
+  padding: 40px 24px;
+  position: relative; z-index: 1;
+}
+
+.screen { display: none; }
+.screen.active {
+  display: block;
+  animation: fadeInUp 0.4s ease both;
+}
+@keyframes fadeInUp {
+  from{opacity:0;transform:translateY(20px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+/* SCREEN 1 */
+.screen-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 800; margin-bottom: 8px;
+}
+.screen-sub {
+  color: var(--text-muted); font-size: 15px;
+  margin-bottom: 32px; line-height: 1.5;
+}
+
+.disruption-list {
+  display: flex; flex-direction: column;
+  gap: 12px; margin-bottom: 28px;
+}
+
+.disruption-item {
+  background: var(--surf);
+  border: 2px solid var(--border);
+  border-radius: 16px; padding: 20px;
+  cursor: pointer;
+  transition: all 0.25s;
+  display: flex; align-items: center; gap: 16px;
+  backdrop-filter: blur(16px);
+}
+.disruption-item:hover {
+  border-color: rgba(245,158,11,0.4);
+  background: var(--surf2);
+  transform: translateX(4px);
+}
+.disruption-item.selected {
+  border-color: var(--red);
+  background: rgba(239,68,68,0.06);
+  box-shadow: 0 0 24px rgba(239,68,68,0.1);
+}
+
+.d-icon { font-size: 32px; }
+.d-info { flex: 1; }
+.d-name { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.d-desc { font-size: 13px; color: var(--text-muted); }
+.d-payout {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 700; color: var(--amber);
+}
+
+.btn-trigger {
+  width: 100%;
+  background: var(--red); color: #fff;
+  border: none; padding: 16px;
+  border-radius: 14px; font-size: 16px; font-weight: 600;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.btn-trigger::after {
+  content: ''; position: absolute;
+  top: 50%; left: 50%; width: 0; height: 0;
+  background: rgba(255,255,255,0.2); border-radius: 50%;
+  transform: translate(-50%,-50%);
+  transition: width 0.5s, height 0.5s;
+}
+.btn-trigger:hover::after { width: 400px; height: 400px; }
+.btn-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(239,68,68,0.4);
+}
+.btn-trigger:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* SCREEN 2 - PROCESSING */
+.processing-screen { text-align: center; padding: 40px 0; }
+.processing-icon {
+  font-size: 64px; margin-bottom: 24px;
+  animation: pulse2 1s ease-in-out infinite;
+}
+@keyframes pulse2 {
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.1);}
+}
+.processing-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 24px; margin-bottom: 12px;
+}
+.processing-sub {
+  color: var(--text-muted); font-size: 15px; margin-bottom: 40px;
+}
+
+.steps-list {
+  text-align: left;
+  display: flex; flex-direction: column; gap: 0;
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+.step-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px;
+  background: var(--surf);
+  position: relative;
+  transition: background 0.3s;
+}
+.step-item + .step-item { border-top: 1px solid var(--border); }
+.step-item.active-step { background: var(--surf2); }
+
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+  transition: all 0.4s;
+}
+.step-dot.pending { color: var(--text-muted); }
+.step-dot.loading {
+  border-color: var(--amber); color: var(--amber);
+  animation: spin 1s linear infinite;
+  box-shadow: 0 0 12px rgba(245,158,11,0.3);
+}
+.step-dot.done {
+  border-color: var(--green); background: var(--green); color: #000;
+  box-shadow: 0 0 12px rgba(16,185,129,0.3);
+}
+@keyframes spin { to{transform:rotate(360deg);} }
+
+.step-text { font-size: 14px; }
+.step-text.muted { color: var(--text-muted); }
+.step-text.active { color: var(--text); font-weight: 500; }
+.step-text.done { color: var(--green); }
+
+/* SCREEN 3 - SUCCESS */
+.success-screen { text-align: center; padding: 20px 0; }
+.success-icon { font-size: 72px; margin-bottom: 20px; animation: bounceIn 0.6s ease; }
+@keyframes bounceIn {
+  0%{transform:scale(0);}
+  60%{transform:scale(1.2);}
+  100%{transform:scale(1);}
+}
+.success-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 800; margin-bottom: 8px;
+}
+.success-sub {
+  color: var(--text-muted); font-size: 15px; margin-bottom: 32px;
+}
+
+.payout-card {
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 18px; padding: 32px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(16px);
+  position: relative; overflow: hidden;
+}
+.payout-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, var(--green), transparent);
+}
+.payout-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+.payout-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 64px; font-weight: 800; color: var(--green);
+  text-shadow: 0 0 40px rgba(16,185,129,0.4);
+}
+.payout-method { font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+
+.reason-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 24px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(16px);
+  text-align: left;
+}
+.reason-label {
+  font-size: 11px; color: var(--amber);
+  margin-bottom: 10px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+}
+.reason-text { font-size: 15px; line-height: 1.65; margin-bottom: 4px; }
+
+.detail-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.detail-row .k { color: var(--text-muted); }
+.detail-row .v { font-weight: 500; }
+
+.btn-dashboard {
+  width: 100%;
+  background: var(--amber); color: #000;
+  border: none; padding: 15px;
+  border-radius: 12px; font-size: 16px; font-weight: 600;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all 0.3s;
+}
+.btn-dashboard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245,158,11,0.4);
+}
+  </style>
+</head>
+<body>
+  <div class="bg-image"></div>
+<div class="bg-mesh"></div>
+
+  <nav>
+    <div class="logo">Gig<span>Shield</span></div>
+    <button class="back-btn" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
+  </nav>
+
+  <div class="container">
+
+    <!-- SCREEN 1: SELECT DISRUPTION -->
+    <div class="screen active" id="screen1">
+      <h1 class="screen-title">🧪 Simulate Disruption</h1>
+      <p class="screen-sub">Select a disruption type to simulate. GigShield will automatically detect it and process your payout.</p>
+
+      <div class="disruption-list">
+        <div class="disruption-item" onclick="selectDisruption(this, 'rain')">
+          <div class="d-icon">🌧️</div>
+          <div class="d-info">
+            <div class="d-name">Heavy Rainfall</div>
+            <div class="d-desc">Rainfall exceeded 25mm — deliveries halted in your zone</div>
+          </div>
+          <div class="d-payout" id="pay-rain">₹--</div>
+        </div>
+        <div class="disruption-item" onclick="selectDisruption(this, 'heat')">
+          <div class="d-icon">🌡️</div>
+          <div class="d-info">
+            <div class="d-name">Extreme Heat</div>
+            <div class="d-desc">Temperature crossed 42°C — outdoor work unsafe</div>
+          </div>
+          <div class="d-payout" id="pay-heat">₹--</div>
+        </div>
+        <div class="disruption-item" onclick="selectDisruption(this, 'aqi')">
+          <div class="d-icon">💨</div>
+          <div class="d-info">
+            <div class="d-name">Severe Air Pollution</div>
+            <div class="d-desc">AQI crossed 300 — hazardous conditions for workers</div>
+          </div>
+          <div class="d-payout" id="pay-aqi">₹--</div>
+        </div>
+        <div class="disruption-item" onclick="selectDisruption(this, 'closure')">
+          <div class="d-icon">🚫</div>
+          <div class="d-info">
+            <div class="d-name">Zone Closure</div>
+            <div class="d-desc">Unplanned curfew or strike — zone inaccessible</div>
+          </div>
+          <div class="d-payout" id="pay-closure">₹--</div>
+        </div>
+      </div>
+
+      <button class="btn-trigger" id="triggerBtn" disabled onclick="startTrigger()">
+        Select a disruption to trigger →
+      </button>
+    </div>
+
+    <!-- SCREEN 2: PROCESSING -->
+    <div class="screen" id="screen2">
+      <div class="processing-screen">
+        <div class="processing-icon">⚡</div>
+        <h2 class="processing-title">GigShield AI Processing</h2>
+        <p class="processing-sub">Automated claim detection in progress...</p>
+        <div class="steps-list">
+          <div class="step-item">
+            <div class="step-dot pending" id="dot1">1</div>
+            <div class="step-text muted" id="txt1">Disruption signal received</div>
+          </div>
+          <div class="step-item">
+            <div class="step-dot pending" id="dot2">2</div>
+            <div class="step-text muted" id="txt2">Verifying zone conditions</div>
+          </div>
+          <div class="step-item">
+            <div class="step-dot pending" id="dot3">3</div>
+            <div class="step-text muted" id="txt3">Validating worker eligibility</div>
+          </div>
+          <div class="step-item">
+            <div class="step-dot pending" id="dot4">4</div>
+            <div class="step-text muted" id="txt4">Fraud check — anomaly scan</div>
+          </div>
+          <div class="step-item">
+            <div class="step-dot pending" id="dot5">5</div>
+            <div class="step-text muted" id="txt5">Calculating payout amount</div>
+          </div>
+          <div class="step-item">
+            <div class="step-dot pending" id="dot6">6</div>
+            <div class="step-text muted" id="txt6">Initiating UPI transfer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: SUCCESS -->
+    <div class="screen" id="screen3">
+      <div class="success-screen">
+        <div class="success-icon">✅</div>
+        <h2 class="success-title">Payout Sent!</h2>
+        <p class="success-sub">Your lost income has been transferred automatically.<br/>No forms. No waiting. No hassle.</p>
+
+        <div class="payout-card">
+          <div class="payout-label">Amount Transferred</div>
+          <div class="payout-amount">₹<span id="finalAmount">--</span></div>
+          <div class="payout-method">📱 Sent to UPI · <span id="transferTime">--</span></div>
+        </div>
+
+        <div class="reason-card">
+          <div class="reason-label">AI Explanation</div>
+          <div class="reason-text" id="aiReason">--</div>
+          <div class="detail-row"><span class="k">Disruption Type</span><span class="v" id="dType">--</span></div>
+          <div class="detail-row"><span class="k">Zone</span><span class="v" id="dZone">--</span></div>
+          <div class="detail-row"><span class="k">Trigger Condition</span><span class="v" id="dCondition">--</span></div>
+         <div class="detail-row"><span class="k">Fraud Check</span><span class="v" style="color:var(--green)" id="dFraudScore">Passed ✓</span></div>
+          <div class="detail-row"><span class="k">Processing Time</span><span class="v" style="color:var(--green)" id="dTime">--</span></div>
+        </div>
+
+        <button class="btn-dashboard" onclick="goToDashboard()">Back to Dashboard →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const worker = JSON.parse(localStorage.getItem('gigshield_worker'));
+    if (!worker) window.location.href = 'onboarding.html';
+
+    const dailyIncome = worker ? worker.daily_income : 600;
+    const payouts = {
+      rain:    Math.round(dailyIncome * 0.7),
+      heat:    Math.round(dailyIncome * 0.5),
+      aqi:     Math.round(dailyIncome * 0.6),
+      closure: Math.round(dailyIncome * 0.8)
+    };
+
+    // Show payout amounts
+    document.getElementById('pay-rain').textContent    = '₹' + payouts.rain;
+    document.getElementById('pay-heat').textContent    = '₹' + payouts.heat;
+    document.getElementById('pay-aqi').textContent     = '₹' + payouts.aqi;
+    document.getElementById('pay-closure').textContent = '₹' + payouts.closure;
+
+    let selectedType = null;
+
+    const disruptions = {
+      rain: {
+        name: 'Heavy Rainfall',
+        icon: '🌧️',
+        condition: 'Rainfall 32mm — exceeded 25mm threshold',
+        reason: `Heavy rainfall of 32mm was recorded in ${worker?.zone}, Chennai — crossing the 25mm parametric trigger threshold. All delivery operations in your zone were halted. Your income protection coverage has been activated automatically.`
+      },
+      heat: {
+        name: 'Extreme Heat',
+        icon: '🌡️',
+        condition: 'Temperature 44.2°C — exceeded 42°C threshold',
+        reason: `Extreme heat of 44.2°C was recorded in ${worker?.zone}, Chennai — exceeding the 42°C safety threshold. Outdoor delivery work was deemed unsafe. Your income protection coverage has been activated automatically.`
+      },
+      aqi: {
+        name: 'Severe Air Pollution',
+        icon: '💨',
+        condition: 'AQI 342 — exceeded 300 threshold',
+        reason: `Severe air pollution with AQI of 342 was recorded in ${worker?.zone}, Chennai — crossing the 300 hazardous threshold. Delivery operations were suspended for worker safety. Your income protection coverage has been activated automatically.`
+      },
+      closure: {
+        name: 'Zone Closure',
+        icon: '🚫',
+        condition: 'Unplanned zone closure — curfew declared',
+        reason: `An unplanned zone closure was declared in ${worker?.zone}, Chennai due to a local curfew. Access to pickup and drop locations was blocked. Your income protection coverage has been activated automatically.`
+      }
+    };
+
+    function selectDisruption(el, type) {
+      document.querySelectorAll('.disruption-item').forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedType = type;
+      const btn = document.getElementById('triggerBtn');
+      btn.disabled = false;
+      btn.textContent = `Trigger ${disruptions[type].name} →`;
+    }
+
+    function showScreen(n) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen' + n).classList.add('active');
+    }
+
+    function setStep(n, state) {
+      const dot = document.getElementById('dot' + n);
+      const txt = document.getElementById('txt' + n);
+      dot.className = 'step-dot ' + state;
+      txt.className = 'step-text ' + (state === 'done' ? 'done' : state === 'loading' ? 'active' : 'muted');
+      if (state === 'loading') dot.textContent = '↻';
+      if (state === 'done') dot.textContent = '✓';
+      if (state === 'pending') dot.textContent = n;
+    }
+async function startTrigger() {
+  if (!selectedType) return;
+  showScreen(2);
+  const startTime = Date.now();
+
+  // Step 1
+  setStep(1, 'loading');
+  await new Promise(r => setTimeout(r, 600));
+  setStep(1, 'done');
+
+  // Step 2 — ML model se verify karo
+setStep(2, 'loading');
+let modelData = { predicted_rainfall_mm: 0, trigger_reason: 'Disruption detected', insurance_trigger: true };
+try {
+  const today = new Date().toISOString().split('T')[0];
+  const mlRes = await fetch('http://localhost:3001/api/check-trigger', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ zone: worker?.zone || 'Velachery', date: today })
+  });
+  modelData = await mlRes.json();
+} catch(e) {
+  console.log('ML model unavailable — using defaults');
+}
+await new Promise(r => setTimeout(r, 600));
+setStep(2, 'done');
+
+// Agar model trigger false hai aur dry month hai
+if (!modelData.insurance_trigger && selectedType === 'rain') {
+  setStep(3, 'loading');
+  await new Promise(r => setTimeout(r, 400));
+  setStep(3, 'done');
+  setStep(4, 'loading');
+  await new Promise(r => setTimeout(r, 400));
+  setStep(4, 'done');
+  // Show no trigger screen
+  document.querySelector('.processing-icon').textContent = '✅';
+  document.querySelector('.processing-title').textContent = 'No Disruption Today';
+  document.querySelector('.processing-sub').textContent =
+    `Rainfall ${modelData.predicted_rainfall_mm}mm in ${worker?.zone} — below trigger threshold. No payout needed. Coverage remains active.`;
+  return;
+}
+
+  // Step 3 — Worker eligibility
+  setStep(3, 'loading');
+  await new Promise(r => setTimeout(r, 600));
+  setStep(3, 'done');
+
+  // Step 4 — REAL Fraud check
+  setStep(4, 'loading');
+  let fraudResult = { verdict: 'PASS', fraud_score: 0, flags: [] };
+  try {
+    const fraudRes = await fetch('http://localhost:3001/api/check-fraud', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        worker_phone: worker?.phone || '0000000000',
+        zone: worker?.zone || 'Velachery',
+        claim_type: disruptions[selectedType].name,
+        claim_date: new Date().toISOString().split('T')[0],
+        delivery_count: Math.floor(Math.random() * 5) // mock — low delivery count
+      })
+    });
+    fraudResult = await fraudRes.json();
+  } catch (err) {
+    console.log('Fraud check failed — defaulting to PASS');
+  }
+  await new Promise(r => setTimeout(r, 600));
+
+  // Agar fraud detected toh HOLD karo
+  if (fraudResult.verdict === 'HOLD') {
+    setStep(4, 'done');
+    showScreen(2);
+    document.querySelector('.processing-icon').textContent = '🚨';
+    document.querySelector('.processing-title').textContent = 'Claim Flagged!';
+    document.querySelector('.processing-sub').textContent =
+      `Fraud detected: ${fraudResult.flags[0] || 'Suspicious activity'}. Claim held for review.`;
+    return;
+  }
+
+  setStep(4, 'done');
+
+  // Step 5
+  setStep(5, 'loading');
+  await new Promise(r => setTimeout(r, 600));
+  setStep(5, 'done');
+
+  // Step 6
+  setStep(6, 'loading');
+  await new Promise(r => setTimeout(r, 600));
+  setStep(6, 'done');
+
+  // Success screen
+  await new Promise(r => setTimeout(r, 500));
+  const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  const d = disruptions[selectedType];
+  const amount = payouts[selectedType];
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  document.getElementById('finalAmount').textContent = amount.toLocaleString('en-IN');
+  document.getElementById('transferTime').textContent = timeStr;
+  document.getElementById('dType').textContent = d.name;
+  document.getElementById('dZone').textContent = (worker?.zone || 'Velachery') + ', Chennai';
+ // Dynamic values from ML model
+const rainfall = modelData.predicted_rainfall_mm || 0;
+const dynamicCondition = selectedType === 'rain'
+  ? `Rainfall ${rainfall}mm — exceeded ${worker?.risk === 'high' ? '1.5' : '3.0'}mm threshold`
+  : d.condition;
+const dynamicReason = selectedType === 'rain' && modelData.insurance_trigger
+  ? `${modelData.trigger_reason} in ${worker?.zone || 'your zone'}, Chennai. All delivery operations were halted. Your income protection coverage has been activated automatically.`
+  : selectedType === 'rain'
+  ? `Rainfall ${rainfall}mm detected in ${worker?.zone}, Chennai. Parametric trigger activated based on zone risk assessment. Your income protection coverage has been activated.`
+  : d.reason;
+
+document.getElementById('dCondition').textContent = dynamicCondition;
+document.getElementById('aiReason').textContent = dynamicReason;
+  document.getElementById('dTime').textContent = elapsed + ' seconds';
+
+  // Fraud score bhi dikhao
+  document.getElementById('dFraudScore').textContent =
+    `Passed ✓ (Score: ${fraudResult.fraud_score}/100)`;
+
+  // Save payout history
+  const payoutHistory = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');
+  payoutHistory.unshift({
+    icon: d.icon,
+    reason: d.name,
+    amount: amount,
+    date: now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  });
+  localStorage.setItem('gigshield_payouts', JSON.stringify(payoutHistory));
+
+  showScreen(3);
+}
+
+    function goToDashboard() {
+      window.location.href = 'dashboard.html';
+    }
+  </script>
+
+</body>
+</html>

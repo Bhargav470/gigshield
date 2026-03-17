@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GigShield — Join Now</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #050507;
+  --surf: rgba(255,255,255,0.05);
+  --surf2: rgba(255,255,255,0.08);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.18);
+  --amber: #F59E0B;
+  --amber-light: #FCD34D;
+  --amber-glow: rgba(245,158,11,0.15);
+  --text: #F0F0F2;
+  --text-muted: #6B6B7B;
+  --green: #10B981;
+  --red: #EF4444;
+}
+
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--amber);border-radius:4px;}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+/* BG IMAGE */
+.bg-image {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  background-image: url('https://images.unsplash.com/photo-1526367790999-0150786686a2?w=1920&q=80');
+  background-size: cover;
+  background-position: center;
+  filter: blur(3px) brightness(0.12);
+  transform: scale(1.05);
+}
+
+.bg-mesh {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(245,158,11,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 80%, rgba(16,185,129,0.04) 0%, transparent 60%);
+}
+
+/* NAV */
+nav {
+  padding: 16px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: rgba(5,5,7,0.7);
+  backdrop-filter: blur(20px);
+  position: relative; z-index: 10;
+}
+
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+.logo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100%{box-shadow:0 0 8px var(--amber);}
+  50%{box-shadow:0 0 20px var(--amber),0 0 40px rgba(245,158,11,0.3);}
+}
+.logo span { color: var(--amber); }
+.back-btn {
+  color: var(--text-muted);
+  text-decoration: none; font-size: 14px;
+  transition: color 0.2s;
+}
+.back-btn:hover { color: var(--text); }
+
+/* STEPPER */
+.stepper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 36px 24px 0;
+  position: relative; z-index: 1;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-circle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 500;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
+}
+
+.step.active .step-circle {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: var(--amber-glow);
+  box-shadow: 0 0 20px rgba(245,158,11,0.2);
+}
+
+.step.done .step-circle {
+  border-color: var(--green);
+  background: var(--green);
+  color: #000;
+  box-shadow: 0 0 16px rgba(16,185,129,0.3);
+}
+
+.step-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.5px; }
+.step.active .step-label { color: var(--amber); }
+.step.done .step-label { color: var(--green); }
+
+.step-line {
+  width: 80px; height: 1px;
+  background: var(--border);
+  margin-bottom: 22px;
+}
+
+/* FORM CONTAINER */
+.form-container {
+  max-width: 540px;
+  margin: 40px auto;
+  padding: 0 24px;
+  width: 100%;
+  position: relative; z-index: 1;
+}
+
+.form-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 44px;
+  backdrop-filter: blur(24px);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+  animation: slideUp 0.5s ease both;
+}
+
+@keyframes slideUp {
+  from{opacity:0;transform:translateY(24px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
+.form-card h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px; font-weight: 800;
+  margin-bottom: 8px;
+}
+.form-card .desc {
+  font-size: 14px; color: var(--text-muted);
+  margin-bottom: 32px; line-height: 1.6;
+}
+
+/* STEP PANELS */
+.step-panel { display: none; }
+.step-panel.active {
+  display: block;
+  animation: fadeIn 0.3s ease both;
+}
+@keyframes fadeIn {
+  from{opacity:0;transform:translateX(10px);}
+  to{opacity:1;transform:translateX(0);}
+}
+
+/* FORM ELEMENTS */
+.field { margin-bottom: 20px; }
+
+label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+input, select {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 16px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+input:focus, select:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.06);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+
+select option { background: #111; }
+
+/* PLATFORM CARDS */
+.platform-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.platform-card {
+  background: rgba(255,255,255,0.04);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  backdrop-filter: blur(10px);
+}
+
+.platform-card:hover {
+  border-color: rgba(245,158,11,0.4);
+  background: rgba(245,158,11,0.05);
+  transform: translateY(-2px);
+}
+
+.platform-card.selected {
+  border-color: var(--amber);
+  background: var(--amber-glow);
+  box-shadow: 0 0 24px rgba(245,158,11,0.15);
+}
+
+.platform-card .p-icon { font-size: 28px; margin-bottom: 8px; }
+.platform-card .p-name { font-size: 14px; font-weight: 500; }
+.platform-card .p-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* ZONE GRID */
+.zone-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.zone-grid::-webkit-scrollbar { width: 3px; }
+.zone-grid::-webkit-scrollbar-track { background: transparent; }
+.zone-grid::-webkit-scrollbar-thumb { background: var(--amber); border-radius: 4px; }
+
+.zone-card {
+  background: rgba(255,255,255,0.04);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.zone-card:hover {
+  border-color: rgba(245,158,11,0.4);
+  transform: translateY(-1px);
+}
+
+.zone-card.selected {
+  border-color: var(--amber);
+  background: var(--amber-glow);
+  box-shadow: 0 0 16px rgba(245,158,11,0.1);
+}
+
+.zone-name { font-size: 14px; font-weight: 500; }
+.zone-risk {
+  font-size: 11px; margin-top: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  display: inline-block;
+}
+.risk-high { background: rgba(239,68,68,0.15); color: #EF4444; }
+.risk-medium { background: rgba(245,158,11,0.15); color: #F59E0B; }
+.risk-low { background: rgba(16,185,129,0.15); color: #10B981; }
+
+.loading {
+  text-align: center; color: var(--text-muted);
+  padding: 20px; font-size: 14px;
+}
+
+/* PREMIUM BOX */
+.premium-box {
+  background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05));
+  border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 16px;
+  padding: 28px;
+  text-align: center;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
+  position: relative; overflow: hidden;
+}
+
+.premium-box::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(to right, transparent, var(--amber), transparent);
+}
+
+.premium-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+.premium-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 56px; font-weight: 800;
+  color: var(--amber);
+  text-shadow: 0 0 40px rgba(245,158,11,0.3);
+}
+.premium-period { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+.coverage-detail {
+  display: flex; justify-content: space-between;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+}
+.coverage-detail .label { color: var(--text-muted); }
+.coverage-detail .value { font-weight: 500; }
+.coverage-detail .value.green { color: var(--green); }
+
+/* BUTTONS */
+.btn-primary {
+  width: 100%;
+  background: var(--amber);
+  color: #000;
+  border: none;
+  padding: 15px;
+  border-radius: 12px;
+  font-size: 16px; font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  margin-top: 8px;
+  transition: all 0.3s;
+  position: relative; overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute; top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: rgba(255,255,255,0.25);
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+  transition: width 0.5s, height 0.5s;
+}
+
+.btn-primary:hover::after { width: 300px; height: 300px; }
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(245,158,11,0.4);
+}
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-back {
+  width: 100%;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  margin-top: 10px;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+.btn-back:hover {
+  border-color: var(--border2);
+  color: var(--text);
+}
+
+.error-msg { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
+</style>
+</head>
+<body>
+  <div class="bg-image"></div>
+<div class="bg-mesh"></div>
+
+  <nav>
+    <div class="logo">Gig<span>Shield</span></div>
+    <a href="index.html" class="back-btn">← Back to Home</a>
+  </nav>
+
+  <div class="stepper">
+    <div class="step active" id="s1">
+      <div class="step-circle">1</div>
+      <div class="step-label">Details</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="s2">
+      <div class="step-circle">2</div>
+      <div class="step-label">Zone</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="s3">
+      <div class="step-circle">3</div>
+      <div class="step-label">Premium</div>
+    </div>
+  </div>
+
+  <div class="form-container">
+    <div class="form-card">
+
+      <!-- STEP 1 -->
+      <div class="step-panel active" id="panel1">
+        <h2>Welcome, Delivery Partner 👋</h2>
+        <p class="desc">Tell us about yourself. Takes less than 2 minutes.</p>
+        <div class="field">
+          <label>Full Name</label>
+          <input type="text" id="name" placeholder="Ramesh Kumar"/>
+        </div>
+        <div class="field">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" placeholder="9876543210"/>
+        </div>
+        <div class="field">
+          <label>Worker ID (Zepto/Blinkit)</label>
+          <input type="text" id="workerid" placeholder="ZPT-CH-2024-XXXX"/>
+        </div>
+        <div class="field">
+          <label>Your Platform</label>
+          <div class="platform-grid">
+            <div class="platform-card selected" onclick="selectPlatform(this, 'zepto')">
+              <div class="p-icon">⚡</div>
+              <div class="p-name">Zepto</div>
+              <div class="p-sub">10-min delivery</div>
+            </div>
+            <div class="platform-card" onclick="selectPlatform(this, 'blinkit')">
+              <div class="p-icon">🟡</div>
+              <div class="p-name">Blinkit</div>
+              <div class="p-sub">Quick commerce</div>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Average Daily Earnings (₹)</label>
+          <input type="number" id="income" placeholder="600" min="200" max="2000"/>
+        </div>
+        <div class="error-msg" id="err1">Please fill all fields!</div>
+        <button class="btn-primary" onclick="goToStep2()">Continue →</button>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step-panel" id="panel2">
+        <h2>Select Your Zone 📍</h2>
+        <p class="desc">Choose the Chennai area where you deliver. Risk is calculated from our database.</p>
+        <div class="zone-grid" id="zoneGrid">
+          <div class="loading">Loading zones from database...</div>
+        </div>
+        <div class="error-msg" id="err2">Please select a zone!</div>
+        <button class="btn-primary" onclick="goToStep3()">Calculate My Premium →</button>
+        <button class="btn-back" onclick="goToStep(1)">← Back</button>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step-panel" id="panel3">
+        <h2>Your Weekly Plan 🛡️</h2>
+        <p class="desc">AI-calculated premium based on your zone risk and income.</p>
+        <div class="premium-box">
+          <div class="premium-label">Your Weekly Premium</div>
+          <div class="premium-amount">₹<span id="premiumAmt">--</span></div>
+          <div class="premium-period">per week · auto-renews every Monday</div>
+        </div>
+        <div id="triggerAlert" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:#EF4444;"></div>
+        <div class="coverage-detail">
+          <span class="label">Coverage Amount</span>
+          <span class="value green" id="coverageAmt">--</span>
+        </div>
+        <div class="coverage-detail">
+          <span class="label">Your Zone</span>
+          <span class="value" id="zoneDisplay">--</span>
+        </div>
+        <div class="coverage-detail">
+          <span class="label">Risk Level</span>
+          <span class="value" id="riskDisplay">--</span>
+        </div>
+        <div class="coverage-detail">
+          <span class="label">Disruptions Covered</span>
+          <span class="value">4 types</span>
+        </div>
+        <div class="coverage-detail">
+          <span class="label">Payout Time</span>
+          <span class="value green">Under 5 minutes</span>
+        </div>
+        <div class="coverage-detail">
+          <span class="label">Claim Process</span>
+          <span class="value green">Zero touch — fully automatic</span>
+        </div>
+        <div class="error-msg" id="err3">Something went wrong. Try again!</div>
+        <button class="btn-primary" id="activateBtn" onclick="activateCoverage()">Activate My Coverage →</button>
+        <button class="btn-back" onclick="goToStep(2)">← Back</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:3001';
+    let selectedPlatform = 'zepto';
+    let selectedZoneId = null;
+    let selectedZoneName = '';
+    let selectedRiskLevel = '';
+    let calculatedPremium = 0;
+    let calculatedCoverage = 0;
+
+    // Load zones from backend
+    async function loadZones() {
+      try {
+        const res = await fetch(`${API}/api/zones`);
+        const zones = await res.json();
+        renderZones(zones);
+      } catch (err) {
+        document.getElementById('zoneGrid').innerHTML = 
+          '<div class="loading" style="color:#EF4444">Failed to load zones. Is backend running?</div>';
+      }
+    }
+
+    function renderZones(zones) {
+      const grid = document.getElementById('zoneGrid');
+      grid.innerHTML = '';
+      zones.forEach(zone => {
+        const riskClass = zone.risk_level === 'high' ? 'risk-high' : 
+                          zone.risk_level === 'medium' ? 'risk-medium' : 'risk-low';
+        const riskLabel = zone.risk_level.charAt(0).toUpperCase() + zone.risk_level.slice(1) + ' Risk';
+        grid.innerHTML += `
+          <div class="zone-card" onclick="selectZone(this, ${zone.id}, '${zone.name}', '${zone.risk_level}')">
+            <div class="zone-name">${zone.name}</div>
+            <div class="zone-risk ${riskClass}">${riskLabel}</div>
+          </div>
+        `;
+      });
+    }
+
+    function selectPlatform(el, platform) {
+      document.querySelectorAll('.platform-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedPlatform = platform;
+    }
+
+    function selectZone(el, id, name, risk) {
+      document.querySelectorAll('.zone-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedZoneId = id;
+      selectedZoneName = name;
+      selectedRiskLevel = risk;
+    }
+
+  async function goToStep2() {
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const income = document.getElementById('income').value.trim();
+  const workerId = document.getElementById('workerid').value.trim();
+
+  if (!name || !phone || !income || !workerId) {
+    document.getElementById('err1').style.display = 'block';
+    document.getElementById('err1').textContent = 'Please fill all fields!';
+    return;
+  }
+
+  // Worker ID verify karo
+  const btn = document.querySelector('#panel1 .btn-primary');
+  btn.disabled = true;
+  btn.textContent = 'Verifying ID...';
+
+  try {
+    const res = await fetch(`${API}/api/verify-worker`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        worker_id: workerId,
+        platform: selectedPlatform
+      })
+    });
+    const data = await res.json();
+
+    if (!data.isValid) {
+      document.getElementById('err1').style.display = 'block';
+      document.getElementById('err1').textContent = data.message;
+      btn.disabled = false;
+      btn.textContent = 'Continue →';
+      return;
+    }
+  } catch (err) {
+    // Backend down — allow proceed
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Continue →';
+  document.getElementById('err1').style.display = 'none';
+  loadZones();
+  goToStep(2);
+}
+
+
+    async function goToStep3() {
+  if (!selectedZoneId) {
+    document.getElementById('err2').style.display = 'block';
+    return;
+  }
+  document.getElementById('err2').style.display = 'none';
+
+  const income = parseInt(document.getElementById('income').value) || 600;
+
+  try {
+    // ML model se real risk score
+    const res = await fetch(`${API}/api/zone-risk/${encodeURIComponent(selectedZoneName)}`);
+    const riskData = await res.json();
+
+    const riskScore = riskData.risk_score || 55;
+    const base = 49;
+    const riskAdd = Math.round((riskScore / 100) * 30);
+    const incomeAdd = income > 800 ? 10 : 0;
+    calculatedPremium = base + riskAdd + incomeAdd;
+    calculatedCoverage = Math.round(income * 7 * 0.7);
+
+    document.getElementById('premiumAmt').textContent = calculatedPremium;
+    document.getElementById('coverageAmt').textContent = '₹' + calculatedCoverage.toLocaleString('en-IN');
+    document.getElementById('zoneDisplay').textContent = selectedZoneName + ', Chennai';
+    document.getElementById('riskDisplay').textContent = riskData.risk_level.charAt(0).toUpperCase() + riskData.risk_level.slice(1);
+
+    // Aaj ka disruption check
+    const today = new Date().toISOString().split('T')[0];
+    const triggerRes = await fetch(`${API}/api/check-trigger`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zone: selectedZoneName, date: today })
+    });
+    const triggerData = await triggerRes.json();
+
+    if (triggerData.insurance_trigger) {
+      const alertDiv = document.getElementById('triggerAlert');
+      alertDiv.style.display = 'block';
+      alertDiv.innerHTML = `⚠️ <strong>Alert:</strong> ${triggerData.trigger_reason} predicted in ${selectedZoneName} today!`;
+    }
+
+  } catch (err) {
+    // Fallback
+    const base = 49;
+    const riskAdd = selectedRiskLevel === 'high' ? 24 : selectedRiskLevel === 'medium' ? 16 : 9;
+    calculatedPremium = base + riskAdd;
+    calculatedCoverage = Math.round(income * 7 * 0.7);
+    document.getElementById('premiumAmt').textContent = calculatedPremium;
+    document.getElementById('coverageAmt').textContent = '₹' + calculatedCoverage.toLocaleString('en-IN');
+    document.getElementById('zoneDisplay').textContent = selectedZoneName + ', Chennai';
+    document.getElementById('riskDisplay').textContent = selectedRiskLevel.charAt(0).toUpperCase() + selectedRiskLevel.slice(1);
+  }
+
+  goToStep(3);
+}
+
+    async function activateCoverage() {
+      const btn = document.getElementById('activateBtn');
+      btn.disabled = true;
+      btn.textContent = 'Activating...';
+
+      const payload = {
+        name: document.getElementById('name').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        worker_id: document.getElementById('workerid').value.trim(),
+        platform: selectedPlatform,
+        daily_income: parseInt(document.getElementById('income').value),
+        zone_id: selectedZoneId
+      };
+
+      try {
+        const res = await fetch(`${API}/api/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Save to localStorage for dashboard
+          localStorage.setItem('gigshield_worker', JSON.stringify({
+            name: payload.name,
+            phone: payload.phone,
+            platform: selectedPlatform,
+            zone: selectedZoneName,
+            risk: selectedRiskLevel,
+            daily_income: payload.daily_income,
+            premium: data.premium,
+            coverage: data.coverage
+          }));
+          window.location.href = 'dashboard.html';
+        } else {
+          throw new Error('Registration failed');
+        }
+      } catch (err) {
+        document.getElementById('err3').style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Activate My Coverage →';
+      }
+    }
+
+    function goToStep(n) {
+      document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel' + n).classList.add('active');
+      document.querySelectorAll('.step').forEach((s, i) => {
+        s.classList.remove('active', 'done');
+        if (i + 1 < n) s.classList.add('done');
+        if (i + 1 === n) s.classList.add('active');
+      });
+      document.querySelectorAll('.step.done .step-circle').forEach(c => { c.textContent = '✓'; });
+    }
+  </script>
+
+</body>
+</html>

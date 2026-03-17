@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GigShield — AI-Powered Income Protection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    :root{
+      --bg:#050507;
+      --surf:rgba(255,255,255,0.04);
+      --surf2:rgba(255,255,255,0.07);
+      --border:rgba(255,255,255,0.08);
+      --border2:rgba(255,255,255,0.15);
+      --amber:#F59E0B;
+      --amber2:#FCD34D;
+      --amber-glow:rgba(245,158,11,0.15);
+      --green:#10B981;
+      --red:#EF4444;
+      --text:#F0F0F2;
+      --text2:#9898A8;
+      --text3:#555560;
+    }
+    .bg-image {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  background-image: url('https://images.unsplash.com/photo-1526367790999-0150786686a2?w=1920&q=80');
+  background-size: cover;
+  background-position: center;
+  filter: blur(3px) brightness(0.15);
+  transform: scale(1.05);
+}
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--amber);border-radius:4px;}
+
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Outfit',sans-serif;
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    /* ANIMATED BACKGROUND */
+    .bg-mesh{
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      pointer-events:none;z-index:0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(245,158,11,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(16,185,129,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 60% at 60% 30%, rgba(245,158,11,0.03) 0%, transparent 50%);
+      animation:meshMove 12s ease-in-out infinite alternate;
+    }
+    @keyframes meshMove{
+      0%{opacity:1;transform:scale(1);}
+      100%{opacity:0.7;transform:scale(1.05);}
+    }
+
+    /* RAIN PARTICLES */
+    .rain-container{
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      pointer-events:none;z-index:0;overflow:hidden;
+    }
+    .rain-drop{
+      position:absolute;top:-20px;
+      width:1px;height:60px;
+      background:linear-gradient(to bottom, transparent, rgba(245,158,11,0.3));
+      animation:rainFall linear infinite;
+      opacity:0;
+    }
+    @keyframes rainFall{
+      0%{transform:translateY(-20px);opacity:0;}
+      10%{opacity:1;}
+      90%{opacity:0.5;}
+      100%{transform:translateY(100vh);opacity:0;}
+    }
+
+    /* NAV */
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      padding:16px 48px;
+      display:flex;justify-content:space-between;align-items:center;
+      background:rgba(5,5,7,0.8);
+      backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+    }
+    .logo{
+      font-family:'Syne',sans-serif;
+      font-size:22px;font-weight:800;
+      display:flex;align-items:center;gap:8px;
+    }
+    .logo-dot{
+      width:8px;height:8px;border-radius:50%;
+      background:var(--amber);
+      box-shadow:0 0 12px var(--amber);
+      animation:pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse{0%,100%{box-shadow:0 0 8px var(--amber);}50%{box-shadow:0 0 20px var(--amber),0 0 40px rgba(245,158,11,0.3);}}
+    .logo span{color:var(--amber);}
+
+    .nav-links{display:flex;align-items:center;gap:32px;}
+    .nav-link{font-size:14px;color:var(--text2);text-decoration:none;transition:color 0.2s;}
+    .nav-link:hover{color:var(--text);}
+    .nav-btn{
+      background:var(--amber);color:#000;border:none;
+      padding:10px 24px;border-radius:8px;
+      font-family:'Outfit',sans-serif;font-size:14px;font-weight:600;
+      cursor:pointer;text-decoration:none;
+      transition:all 0.2s;
+      position:relative;overflow:hidden;
+    }
+    .nav-btn::after{
+      content:'';position:absolute;top:50%;left:50%;
+      width:0;height:0;
+      background:rgba(255,255,255,0.3);
+      border-radius:50%;transform:translate(-50%,-50%);
+      transition:width 0.4s,height 0.4s;
+    }
+    .nav-btn:hover::after{width:200px;height:200px;}
+    .nav-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(245,158,11,0.4);}
+
+    /* HERO */
+    .hero{
+      min-height:100vh;
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      text-align:center;
+      padding:120px 24px 80px;
+      position:relative;z-index:1;
+    }
+
+    .badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--amber-glow);
+      border:1px solid rgba(245,158,11,0.3);
+      color:var(--amber);
+      font-size:13px;font-weight:500;
+      padding:6px 16px;border-radius:999px;
+      margin-bottom:40px;
+      animation:fadeInDown 0.8s ease both;
+    }
+    .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:pulse 2s infinite;}
+
+    h1{
+      font-family:'Syne',sans-serif;
+      font-size:clamp(42px,7vw,88px);
+      font-weight:800;
+      line-height:1.05;
+      letter-spacing:-2px;
+      max-width:900px;
+      margin-bottom:28px;
+      animation:fadeInUp 0.8s 0.2s ease both;
+    }
+    h1 .line2{
+      background:linear-gradient(135deg,var(--amber),var(--amber2),var(--amber));
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+
+    .hero-sub{
+      font-size:18px;color:var(--text2);
+      max-width:520px;line-height:1.7;
+      margin-bottom:52px;
+      animation:fadeInUp 0.8s 0.3s ease both;
+    }
+
+    .hero-btns{
+      display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+      animation:fadeInUp 0.8s 0.4s ease both;
+    }
+
+    .btn-primary{
+      background:var(--amber);color:#000;border:none;
+      padding:16px 36px;border-radius:12px;
+      font-family:'Outfit',sans-serif;font-size:16px;font-weight:600;
+      cursor:pointer;text-decoration:none;
+      transition:all 0.3s;
+      position:relative;overflow:hidden;
+    }
+    .btn-primary:hover{
+      transform:translateY(-2px);
+      box-shadow:0 12px 32px rgba(245,158,11,0.5);
+    }
+    .btn-secondary{
+      background:var(--surf);color:var(--text);
+      border:1px solid var(--border2);
+      padding:16px 36px;border-radius:12px;
+      font-family:'Outfit',sans-serif;font-size:16px;
+      cursor:pointer;text-decoration:none;
+      backdrop-filter:blur(10px);
+      transition:all 0.3s;
+    }
+    .btn-secondary:hover{
+      background:var(--surf2);
+      border-color:rgba(255,255,255,0.25);
+      transform:translateY(-2px);
+    }
+
+    /* FLOATING CARDS */
+    .hero-cards{
+      display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+      margin-top:72px;
+      animation:fadeInUp 0.8s 0.5s ease both;
+    }
+    .mini-card{
+      background:var(--surf);
+      border:1px solid var(--border);
+      backdrop-filter:blur(20px);
+      border-radius:16px;
+      padding:20px 28px;
+      text-align:center;
+      transition:all 0.3s;
+    }
+    .mini-card:hover{
+      border-color:rgba(245,158,11,0.3);
+      background:var(--surf2);
+      transform:translateY(-4px);
+      box-shadow:0 20px 40px rgba(0,0,0,0.3);
+    }
+    .mini-card .num{
+      font-family:'JetBrains Mono',monospace;
+      font-size:28px;font-weight:500;
+      color:var(--amber);
+    }
+    .mini-card .lbl{font-size:12px;color:var(--text2);margin-top:4px;}
+
+    /* DIVIDER */
+    .divider{
+      width:100%;max-width:1000px;margin:0 auto;
+      height:1px;background:linear-gradient(to right,transparent,var(--border),transparent);
+    }
+
+    /* HOW IT WORKS */
+    .section{
+      max-width:1100px;margin:0 auto;
+      padding:100px 24px;
+      position:relative;z-index:1;
+    }
+    .section-tag{
+      font-family:'JetBrains Mono',monospace;
+      font-size:12px;color:var(--amber);
+      letter-spacing:3px;text-transform:uppercase;
+      margin-bottom:16px;
+    }
+    .section-title{
+      font-family:'Syne',sans-serif;
+      font-size:clamp(28px,4vw,48px);
+      font-weight:800;margin-bottom:16px;
+    }
+    .section-sub{font-size:16px;color:var(--text2);max-width:500px;line-height:1.6;}
+
+    /* FLOW STEPS */
+    .flow{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:2px;margin-top:60px;
+      border:1px solid var(--border);border-radius:20px;overflow:hidden;
+    }
+    .flow-step{
+      background:var(--surf);
+      padding:36px 28px;
+      position:relative;
+      transition:all 0.3s;
+    }
+    .flow-step:hover{background:var(--surf2);}
+    .flow-step::before{
+      content:attr(data-num);
+      position:absolute;top:20px;right:20px;
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;color:var(--text3);
+    }
+    .flow-icon{font-size:36px;margin-bottom:20px;}
+    .flow-title{
+      font-family:'Syne',sans-serif;
+      font-size:18px;font-weight:700;margin-bottom:10px;
+    }
+    .flow-desc{font-size:14px;color:var(--text2);line-height:1.6;}
+
+    /* FEATURE GRID */
+    .features{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+      gap:16px;margin-top:60px;
+    }
+    .feat-card{
+      background:var(--surf);
+      border:1px solid var(--border);
+      border-radius:20px;padding:32px;
+      transition:all 0.3s;
+      position:relative;overflow:hidden;
+    }
+    .feat-card::before{
+      content:'';position:absolute;
+      top:0;left:0;right:0;height:2px;
+      background:linear-gradient(to right,transparent,var(--amber),transparent);
+      opacity:0;transition:opacity 0.3s;
+    }
+    .feat-card:hover{
+      border-color:rgba(245,158,11,0.2);
+      background:var(--surf2);
+      transform:translateY(-4px);
+      box-shadow:0 24px 48px rgba(0,0,0,0.4);
+    }
+    .feat-card:hover::before{opacity:1;}
+    .feat-icon{
+      width:48px;height:48px;border-radius:12px;
+      background:var(--amber-glow);
+      border:1px solid rgba(245,158,11,0.2);
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;margin-bottom:20px;
+    }
+    .feat-title{
+      font-family:'Syne',sans-serif;
+      font-size:18px;font-weight:700;margin-bottom:10px;
+    }
+    .feat-desc{font-size:14px;color:var(--text2);line-height:1.65;}
+    .feat-tag{
+      display:inline-block;
+      margin-top:16px;
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;color:var(--amber);
+      background:var(--amber-glow);
+      padding:3px 10px;border-radius:4px;
+    }
+
+    /* DISRUPTION TICKER */
+    .ticker-wrap{
+      width:100%;overflow:hidden;
+      background:rgba(245,158,11,0.05);
+      border-top:1px solid rgba(245,158,11,0.1);
+      border-bottom:1px solid rgba(245,158,11,0.1);
+      padding:12px 0;
+      position:relative;z-index:1;
+    }
+    .ticker{
+      display:flex;gap:48px;
+      animation:ticker 20s linear infinite;
+      white-space:nowrap;
+    }
+    .ticker-item{
+      font-family:'JetBrains Mono',monospace;
+      font-size:13px;color:var(--amber);
+      display:flex;align-items:center;gap:8px;
+      flex-shrink:0;
+    }
+    @keyframes ticker{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+    /* TRUST SECTION */
+    .trust{
+      background:var(--surf);
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:60px;
+      text-align:center;
+      margin-top:60px;
+      position:relative;overflow:hidden;
+    }
+    .trust::before{
+      content:'';position:absolute;
+      top:-80px;left:50%;transform:translateX(-50%);
+      width:400px;height:400px;
+      background:radial-gradient(circle,rgba(245,158,11,0.08),transparent 70%);
+      pointer-events:none;
+    }
+    .trust h2{
+      font-family:'Syne',sans-serif;
+      font-size:clamp(28px,4vw,48px);
+      font-weight:800;margin-bottom:16px;
+    }
+    .trust p{font-size:17px;color:var(--text2);max-width:480px;margin:0 auto 40px;}
+
+    /* FOOTER */
+    footer{
+      border-top:1px solid var(--border);
+      padding:32px 48px;
+      display:flex;justify-content:space-between;align-items:center;
+      position:relative;z-index:1;
+      flex-wrap:wrap;gap:16px;
+    }
+    .footer-left{font-size:13px;color:var(--text3);}
+    .footer-right{
+      font-family:'JetBrains Mono',monospace;
+      font-size:11px;color:var(--text3);
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeInDown{from{opacity:0;transform:translateY(-20px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes fadeInUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+
+    .reveal{
+      opacity:0;transform:translateY(40px);
+      transition:opacity 0.7s ease,transform 0.7s ease;
+    }
+    .reveal.visible{opacity:1;transform:translateY(0);}
+
+    @media(max-width:768px){
+      nav{padding:16px 20px;}
+      .nav-links{display:none;}
+      .hero{padding:100px 20px 60px;}
+      .section{padding:60px 20px;}
+      .trust{padding:40px 24px;}
+      footer{padding:24px 20px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ANIMATED BG -->
+ <div class="bg-image"></div>
+<div class="bg-mesh"></div>
+<div class="rain-container" id="rainContainer"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">
+    <div class="logo-dot"></div>
+    Gig<span>Shield</span>
+  </div>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How it works</a>
+    <a href="#features" class="nav-link">Features</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+  </div>
+  <a href="onboarding.html" class="nav-btn">Get Protected →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="badge">
+    <div class="badge-dot"></div>
+    AI-Powered · Zepto & Blinkit Partners · Chennai
+  </div>
+
+  <h1>
+    Your Income,<br/>
+    <span class="line2">Always Protected.</span>
+  </h1>
+
+  <p class="hero-sub">
+    When heavy rain, extreme heat, or zone closures stop your deliveries —
+    GigShield automatically detects and pays you. No forms. No calls. No waiting.
+  </p>
+
+  <div class="hero-btns">
+    <a href="onboarding.html" class="btn-primary">Start Free This Week →</a>
+    <a href="dashboard.html" class="btn-secondary">View Live Dashboard</a>
+  </div>
+
+  <div class="hero-cards">
+    <div class="mini-card">
+      <div class="num" data-target="49">₹49</div>
+      <div class="lbl">Starting weekly premium</div>
+    </div>
+    <div class="mini-card">
+      <div class="num">5 min</div>
+      <div class="lbl">Avg payout time</div>
+    </div>
+    <div class="mini-card">
+      <div class="num" data-target="0">Zero</div>
+      <div class="lbl">Forms to fill</div>
+    </div>
+    <div class="mini-card">
+      <div class="num" data-target="4">4</div>
+      <div class="lbl">Disruption triggers</div>
+    </div>
+    <div class="mini-card">
+      <div class="num" data-target="40">40</div>
+      <div class="lbl">Chennai zones covered</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker" id="ticker">
+    <span class="ticker-item">🌧️ Heavy Rainfall Trigger Active — Velachery</span>
+    <span class="ticker-item">✅ Payout Processed — ₹420 — Tambaram</span>
+    <span class="ticker-item">🤖 AI Fraud Check — PASSED</span>
+    <span class="ticker-item">💨 AQI Monitor — Chennai — Safe</span>
+    <span class="ticker-item">🛡️ 128 workers covered this week</span>
+    <span class="ticker-item">⚡ Zero-touch claim — Medavakkam</span>
+    <span class="ticker-item">🌧️ Heavy Rainfall Trigger Active — Velachery</span>
+    <span class="ticker-item">✅ Payout Processed — ₹420 — Tambaram</span>
+    <span class="ticker-item">🤖 AI Fraud Check — PASSED</span>
+    <span class="ticker-item">💨 AQI Monitor — Chennai — Safe</span>
+    <span class="ticker-item">🛡️ 128 workers covered this week</span>
+    <span class="ticker-item">⚡ Zero-touch claim — Medavakkam</span>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="reveal">
+    <div class="section-tag">// How it works</div>
+    <h2 class="section-title">From disruption to payout<br/>in under 5 minutes</h2>
+    <p class="section-sub">Our AI monitors your zone 24/7. When a disruption hits, we act — you don't have to.</p>
+  </div>
+
+  <div class="flow reveal">
+    <div class="flow-step" data-num="01">
+      <div class="flow-icon">📱</div>
+      <div class="flow-title">Register once</div>
+      <div class="flow-desc">Enter your Zepto/Blinkit ID, select your zone. Takes 2 minutes. No documents needed.</div>
+    </div>
+    <div class="flow-step" data-num="02">
+      <div class="flow-icon">🤖</div>
+      <div class="flow-title">AI monitors 24/7</div>
+      <div class="flow-desc">Our trained ML model watches rainfall, AQI, heat and zone closures in real-time.</div>
+    </div>
+    <div class="flow-step" data-num="03">
+      <div class="flow-icon">⚡</div>
+      <div class="flow-title">Auto claim triggered</div>
+      <div class="flow-desc">Threshold crossed → claim auto-initiates. Fraud check runs in seconds.</div>
+    </div>
+    <div class="flow-step" data-num="04">
+      <div class="flow-icon">💸</div>
+      <div class="flow-title">Instant UPI payout</div>
+      <div class="flow-desc">Lost income calculated based on your earnings profile. Sent directly to your UPI.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="reveal">
+    <div class="section-tag">// Features</div>
+    <h2 class="section-title">Built different.<br/>For delivery workers.</h2>
+  </div>
+
+  <div class="features">
+    <div class="feat-card reveal">
+      <div class="feat-icon">🧠</div>
+      <div class="feat-title">Real IMD Rainfall Model</div>
+      <div class="feat-desc">Trained on district-wise daily rainfall data from India Meteorological Department. Zone-specific predictions — not generic weather APIs.</div>
+      <span class="feat-tag">GradientBoosting · R² 0.63</span>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">🔍</div>
+      <div class="feat-title">Intelligent Fraud Detection</div>
+      <div class="feat-desc">Delivery count validation, duplicate claim prevention, zone mismatch detection. Fraud score 0-100 on every claim.</div>
+      <span class="feat-tag">4-layer fraud check</span>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">📍</div>
+      <div class="feat-title">40 Chennai Zones</div>
+      <div class="feat-desc">Hyperlocal coverage from Velachery to Navalur. Each zone has individual risk score — your premium reflects actual local risk.</div>
+      <span class="feat-tag">Zone-based pricing</span>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">🛡️</div>
+      <div class="feat-title">Worker ID Verification</div>
+      <div class="feat-desc">Only verified Zepto/Blinkit delivery partners can enroll. Format-validated IDs prevent fraudulent signups.</div>
+      <span class="feat-tag">ZPT-XX-XXXX-XXXX format</span>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">💰</div>
+      <div class="feat-title">Dynamic Loss Calculation</div>
+      <div class="feat-desc">Payout = 70% of your declared daily income. Not a flat ₹500. Your coverage is personal — tied to what you actually earn.</div>
+      <span class="feat-tag">Income-linked payout</span>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Live Analytics Dashboard</div>
+      <div class="feat-desc">Real-time disruption monitors, payout history, weekly coverage stats. Worker view and insurer admin view both included.</div>
+      <span class="feat-tag">Real-time monitoring</span>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <div class="trust reveal">
+    <h2>Start protecting your income<br/>this week.</h2>
+    <p>Join delivery partners across Chennai who never worry about disruptions anymore.</p>
+    <a href="onboarding.html" class="btn-primary" style="display:inline-block;">
+      Get Protected for ₹49/week →
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-left">© 2026 GigShield · AI-Powered Parametric Insurance · Chennai</div>
+  <div class="footer-right">COVERAGE_SCOPE: INCOME_LOSS_ONLY · EXCLUDED: HEALTH, VEHICLE, ACCIDENTS</div>
+</footer>
+
+<script>
+  // Rain drops
+  const rain = document.getElementById('rainContainer');
+  for(let i = 0; i < 40; i++) {
+    const drop = document.createElement('div');
+    drop.className = 'rain-drop';
+    drop.style.left = Math.random() * 100 + '%';
+    drop.style.animationDuration = (Math.random() * 3 + 2) + 's';
+    drop.style.animationDelay = (Math.random() * 5) + 's';
+    drop.style.height = (Math.random() * 60 + 20) + 'px';
+    drop.style.opacity = Math.random() * 0.4;
+    rain.appendChild(drop);
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if(entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 100);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+</script>
+</body>
+</html>
