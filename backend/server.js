@@ -9,23 +9,27 @@ app.use(cors());
 app.use(express.json());
 
 // DB Connection
-const db = mysql.createConnection({
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-   ssl: process.env.DB_SSL === 'true' ? {
+  ssl: process.env.DB_SSL === 'true' ? {
     rejectUnauthorized: true
-  } : false
+  } : false,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 });
 
-db.connect((err) => {
+db.getConnection((err, connection) => {
   if (err) {
     console.error(' DB connection failed:', err);
     return;
   }
-  console.log(' MySQL connected');
+  console.log(' MySQL connected via pool');
+  connection.release();
 });
 
 // GET all zones
