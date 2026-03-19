@@ -244,11 +244,24 @@ app.post('/api/verify-worker', (req, res) => {
   res.json({ isValid, message });
 });
 
+app.get('/api/setup', (req, res) => {
+  const queries = [
+    `CREATE TABLE IF NOT EXISTS zones (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), city VARCHAR(100), risk_level VARCHAR(20), risk_score INT, avg_rainfall_mm FLOAT, flood_prone BOOLEAN)`,
+    `CREATE TABLE IF NOT EXISTS workers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), phone VARCHAR(15), worker_id VARCHAR(50), platform VARCHAR(50), daily_income INT, zone_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
+    `CREATE TABLE IF NOT EXISTS policies (id INT AUTO_INCREMENT PRIMARY KEY, worker_id INT, weekly_premium INT, coverage_amount INT, status VARCHAR(20) DEFAULT 'active', start_date DATE)`,
+    `CREATE TABLE IF NOT EXISTS claims (id INT AUTO_INCREMENT PRIMARY KEY, worker_phone VARCHAR(15), zone VARCHAR(100), claim_type VARCHAR(50), claim_date DATE, delivery_count INT DEFAULT 0, payout_amount INT, fraud_score INT DEFAULT 0, verdict VARCHAR(20) DEFAULT 'PASS', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`
+  ];
+  let completed = 0;
+  queries.forEach(q => {
+    db.query(q, (err) => {
+      if (err) console.error(err);
+      else { completed++; if(completed === queries.length) res.json({ success: true, message: 'All tables created!' }); }
+    });
+  });
+});
+
 // YE LAST MEIN RAHEGA — MAT CHHONA
 app.listen(process.env.PORT, () => {
   console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
 });
-// YE LAST MEIN RAHEGA — MAT CHHONA
-app.listen(process.env.PORT, () => {
-  console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
-});
+
