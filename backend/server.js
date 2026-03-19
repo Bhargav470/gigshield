@@ -34,7 +34,7 @@ db.getConnection((err, connection) => {
 
 // GET all zones
 app.get('/api/zones', (req, res) => {
-  db.query('SELECT * FROM zones WHERE city = "Chennai"', (err, results) => {
+  db.query("SELECT * FROM zones WHERE city = 'Chennai'", (err, results) =>  {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
