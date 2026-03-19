@@ -249,13 +249,46 @@ app.get('/api/setup', (req, res) => {
     `CREATE TABLE IF NOT EXISTS zones (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), city VARCHAR(100), risk_level VARCHAR(20), risk_score INT, avg_rainfall_mm FLOAT, flood_prone BOOLEAN)`,
     `CREATE TABLE IF NOT EXISTS workers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), phone VARCHAR(15), worker_id VARCHAR(50), platform VARCHAR(50), daily_income INT, zone_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS policies (id INT AUTO_INCREMENT PRIMARY KEY, worker_id INT, weekly_premium INT, coverage_amount INT, status VARCHAR(20) DEFAULT 'active', start_date DATE)`,
-    `CREATE TABLE IF NOT EXISTS claims (id INT AUTO_INCREMENT PRIMARY KEY, worker_phone VARCHAR(15), zone VARCHAR(100), claim_type VARCHAR(50), claim_date DATE, delivery_count INT DEFAULT 0, payout_amount INT, fraud_score INT DEFAULT 0, verdict VARCHAR(20) DEFAULT 'PASS', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`
+    `CREATE TABLE IF NOT EXISTS claims (id INT AUTO_INCREMENT PRIMARY KEY, worker_phone VARCHAR(15), zone VARCHAR(100), claim_type VARCHAR(50), claim_date DATE, delivery_count INT DEFAULT 0, payout_amount INT, fraud_score INT DEFAULT 0, verdict VARCHAR(20) DEFAULT 'PASS', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
+    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
+    ('Velachery','Chennai','high',85,142.5,1),('T Nagar','Chennai','medium',60,98.2,0),
+    ('Anna Nagar','Chennai','low',30,72.1,0),('Porur','Chennai','high',80,135.0,1),
+    ('Adyar','Chennai','medium',55,95.5,0),('Tambaram','Chennai','high',75,128.3,1),
+    ('Sholinganallur','Chennai','medium',50,88.7,0),('Chromepet','Chennai','low',35,74.2,0),
+    ('Perungudi','Chennai','high',78,130.1,1),('Pallikaranai','Chennai','high',88,155.2,1),
+    ('Madipakkam','Chennai','high',82,138.4,1),('Guindy','Chennai','medium',58,96.3,0),
+    ('Nungambakkam','Chennai','low',28,70.5,0),('Egmore','Chennai','low',32,73.8,0),
+    ('Mylapore','Chennai','medium',52,91.2,0),('Royapettah','Chennai','medium',48,85.6,0),
+    ('Kodambakkam','Chennai','medium',55,94.1,0),('Virugambakkam','Chennai','medium',57,97.3,0),
+    ('Saligramam','Chennai','low',38,76.4,0),('Vadapalani','Chennai','medium',53,92.7,0),
+    ('Ashok Nagar','Chennai','low',33,74.9,0),('KK Nagar','Chennai','low',36,75.8,0),
+    ('Arumbakkam','Chennai','medium',51,89.5,0),('Villivakkam','Chennai','medium',56,95.0,0),
+    ('Perambur','Chennai','medium',54,93.2,0),('Kolathur','Chennai','medium',59,97.8,0),
+    ('Madhavaram','Chennai','high',72,122.4,1),('Thiruvottiyur','Chennai','high',76,129.6,1),
+    ('Manali','Chennai','high',79,133.7,1),('Ambattur','Chennai','medium',62,102.5,0),
+    ('Avadi','Chennai','high',70,118.3,1),('Poonamallee','Chennai','high',73,124.1,1),
+    ('Vandalur','Chennai','high',71,120.7,1),('Medavakkam','Chennai','high',83,140.2,1),
+    ('Perungalathur','Chennai','high',77,131.5,1),('Urapakkam','Chennai','medium',63,104.8,0),
+    ('Guduvanchery','Chennai','medium',61,101.3,0),('Kelambakkam','Chennai','high',74,126.9,1),
+    ('Siruseri','Chennai','medium',49,87.4,0),('Navalur','Chennai','low',40,78.6,0)`
   ];
+
   let completed = 0;
+  const total = queries.length;
+  let hasError = false;
+
   queries.forEach(q => {
     db.query(q, (err) => {
-      if (err) console.error(err);
-      else { completed++; if(completed === queries.length) res.json({ success: true, message: 'All tables created!' }); }
+      if (err && !hasError) {
+        hasError = true;
+        console.error(err);
+        res.status(500).json({ error: err.message });
+      } else {
+        completed++;
+        if (completed === total && !hasError) {
+          res.json({ success: true, message: 'All tables and zones created!' });
+        }
+      }
     });
   });
 });
