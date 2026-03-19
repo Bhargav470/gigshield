@@ -1,5 +1,5 @@
 require('dotenv').config();
-const FLASK_MODEL_URL = 'http://127.0.0.1:5001';
+const FLASK_MODEL_URL = 'https://gigshield-model.onrender.com';
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
