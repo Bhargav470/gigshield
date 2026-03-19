@@ -504,7 +504,7 @@ setStep(2, 'loading');
 let modelData = { predicted_rainfall_mm: 0, trigger_reason: 'Disruption detected', insurance_trigger: true };
 try {
   const today = new Date().toISOString().split('T')[0];
-  const mlRes = await fetch('http://localhost:3001/api/check-trigger', {
+ const mlRes = await fetch('https://gigshield-backend.onrender.com/api/check-trigger', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ zone: worker?.zone || 'Velachery', date: today })
@@ -541,7 +541,7 @@ if (!modelData.insurance_trigger && selectedType === 'rain') {
   setStep(4, 'loading');
   let fraudResult = { verdict: 'PASS', fraud_score: 0, flags: [] };
   try {
-    const fraudRes = await fetch('http://localhost:3001/api/check-fraud', {
+    const fraudRes = await fetch('https://gigshield-backend.onrender.com/api/check-fraud', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
