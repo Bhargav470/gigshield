@@ -236,6 +236,46 @@ All of the following are fully implemented and live in the deployed prototype:
 
 ---
 
+## Adversarial Defense & Anti-Spoofing Strategy
+
+A coordinated syndicate of workers using GPS spoofing to fake disruption locations is a real threat to any parametric insurance platform. Here is how GigShield addresses it architecturally.
+
+### The Differentiation — Genuine Worker vs Bad Actor
+
+A genuine delivery partner stuck in a flood zone behaves differently from a bad actor spoofing their location from home.
+
+Genuine worker signals: delivery count drops to zero during the disruption window, last known GPS movement was within the claimed zone before the disruption, claim filed within the natural window of the disruption event, and the worker's 30-day delivery history shows consistent zone activity.
+
+Bad actor signals: delivery count remains normal or high while claiming disruption (our existing Layer 2 fraud check catches this — more than 15 deliveries on a claimed disruption day scores +50), GPS coordinates change unusually fast between delivery pings suggesting spoofed movement, claim filed at an unusual hour relative to the disruption event, and the worker has never previously operated in the claimed zone.
+
+Our existing fraud detection already catches the delivery count signal. Phase 2 GPS validation will add location trajectory analysis.
+
+### The Data — Beyond GPS Coordinates
+
+To detect a coordinated fraud ring, GigShield uses the following data points:
+
+Zone Solidarity Score: If 40 out of 50 workers in a zone claim disruption in the same hour, that confirms a real event. If only 5 out of 50 claim it, those 5 are flagged for review. This cross-worker signal makes coordinated spoofing exponentially harder — a syndicate would need to recruit the majority of workers in a zone to beat this check.
+
+Claim Timing Correlation: Legitimate disruption claims cluster naturally around the disruption window. Spoofed claims in a coordinated attack tend to arrive in batches at irregular hours. Outlier timing patterns are flagged.
+
+Delivery Platform Cross-Reference (Phase 2): In production, Zepto and Blinkit APIs will confirm whether a worker's delivery activity dropped during the claimed disruption. A worker with 22 completed deliveries during a claimed flood — as our fraud engine already checks today — cannot successfully spoof.
+
+Device Fingerprinting (Phase 3): Multiple accounts filing claims from the same device or IP cluster signal a fraud ring. This is a standard anti-fraud technique used in fintech that we will implement at scale.
+
+### The UX Balance — Flagged Claims Without Penalizing Honest Workers
+
+This is the hardest design problem. A genuine worker experiencing a real network drop in bad weather might look suspicious to an algorithm.
+
+GigShield's approach has three layers:
+
+First, the fraud score threshold for automatic HOLD is set conservatively at 60+. A worker scoring 30–59 goes to REVIEW, not rejection. They still receive a provisional acknowledgment and are not left in silence.
+
+Second, REVIEW queue resolution is time-bound. Any claim in REVIEW that is not resolved within 2 hours automatically escalates — the worker is not stuck indefinitely.
+
+Third, the Zone Solidarity Score actively protects honest workers. If their zone shows a genuine disruption signal (majority of workers not delivering), their individual fraud score is discounted proportionally. A real flood protects real workers from being falsely flagged.
+
+The principle: we would rather approve a borderline legitimate claim than deny a genuine one. Fraud prevention is calibrated to catch organized rings, not to penalize individual workers who happen to have unusual delivery patterns on a disruption day.
+
 ## What Comes Next — Phase 2 and Phase 3
 
 **Phase 2 — Protect Your Worker (Mar 21 – Apr 4)**
