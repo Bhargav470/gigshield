@@ -302,11 +302,11 @@ app.get('/api/live-weather', async (req, res) => {
 
   try {
     const weatherRes = await axios.get(
-      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=precipitation_sum,temperature_2m_max&timezone=Asia/Kolkata&forecast_days=1`
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,precipitation&timezone=Asia/Kolkata`
     );
 
-    const rainfall = weatherRes.data.daily.precipitation_sum[0] || 0;
-    const temp = weatherRes.data.daily.temperature_2m_max[0] || 30;
+    const rainfall = weatherRes.data.current.precipitation || 0;
+    const temp = weatherRes.data.current.temperature_2m || 30;
 
     let aqi = 85;
     let aqiSource = 'default';
