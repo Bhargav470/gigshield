@@ -1,9 +1,10 @@
 require('dotenv').config();
+const axios = require('axios');
 const FLASK_MODEL_URL = 'https://gigshield-model.onrender.com';
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
-const axios = require('axios');
+
 
 const app = express();
 app.use(cors());
@@ -295,14 +296,11 @@ app.get('/api/setup', (req, res) => {
 });
 // Live Weather API — Open-Meteo (free, no key) + AQICN (free token)
 app.get('/api/live-weather', async (req, res) => {
-  const AQICN_TOKEN = '6c868c8980b417984c83de576bdac72bfb305d9f'; // aqicn.org/api se lo
-  
-  // Chennai coordinates
+  const AQICN_TOKEN = '6c868c8980b417984c83de576bdac72bfb305d9f';
   const LAT = 13.0827;
   const LON = 80.2707;
 
   try {
-    // Rainfall + Temperature from Open-Meteo (no API key needed)
     const weatherRes = await axios.get(
       `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=precipitation_sum,temperature_2m_max&timezone=Asia/Kolkata&forecast_days=1`
     );
@@ -310,18 +308,22 @@ app.get('/api/live-weather', async (req, res) => {
     const rainfall = weatherRes.data.daily.precipitation_sum[0] || 0;
     const temp = weatherRes.data.daily.temperature_2m_max[0] || 30;
 
-    // AQI from AQICN
-    let aqi = 0;
+    let aqi = 85;
+    let aqiSource = 'default';
     try {
       const aqiRes = await axios.get(
-        `https://api.waqi.info/feed/chennai/?token=${AQICN_TOKEN}`
+        `https://api.waqi.info/feed/chennai/?token=${AQICN_TOKEN}`,
+        { timeout: 5000 }
       );
-      aqi = aqiRes.data.data.aqi || 0;
+      if (aqiRes.data && aqiRes.data.data && aqiRes.data.data.aqi) {
+        aqi = aqiRes.data.data.aqi;
+        aqiSource = 'live';
+      }
     } catch (e) {
-      aqi = 85; // default safe value if AQI fails
+      aqi = 85;
+      aqiSource = 'default';
     }
 
-    // Determine triggers
     const rainTrigger = rainfall > 1.5;
     const heatTrigger = temp > 42;
     const aqiTrigger = aqi > 300;
@@ -330,12 +332,14 @@ app.get('/api/live-weather', async (req, res) => {
       rainfall_mm: rainfall,
       temperature_c: temp,
       aqi: aqi,
+      aqi_source: aqiSource,
       triggers: {
         rain: { active: rainTrigger, value: rainfall, threshold: 1.5, unit: 'mm' },
-        heat: { active: heatTrigger, value: temp, threshold: 42, unit: '°C' },
+        heat: { active: heatTrigger, value: temp, threshold: 42, unit: 'C' },
         aqi:  { active: aqiTrigger, value: aqi, threshold: 300, unit: 'AQI' }
       },
       any_trigger_active: rainTrigger || heatTrigger || aqiTrigger,
+      source: 'Open-Meteo + AQICN',
       timestamp: new Date().toISOString()
     });
 
