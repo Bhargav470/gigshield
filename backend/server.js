@@ -3,6 +3,7 @@ const FLASK_MODEL_URL = 'https://gigshield-model.onrender.com';
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const axios = require('axios');
 
 const app = express();
 app.use(cors());
@@ -292,8 +293,57 @@ app.get('/api/setup', (req, res) => {
     });
   });
 });
+// Live Weather API — Open-Meteo (free, no key) + AQICN (free token)
+app.get('/api/live-weather', async (req, res) => {
+  const AQICN_TOKEN = '6c868c8980b417984c83de576bdac72bfb305d9f'; // aqicn.org/api se lo
+  
+  // Chennai coordinates
+  const LAT = 13.0827;
+  const LON = 80.2707;
 
-// YE LAST MEIN RAHEGA — MAT CHHONA
+  try {
+    // Rainfall + Temperature from Open-Meteo (no API key needed)
+    const weatherRes = await axios.get(
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&daily=precipitation_sum,temperature_2m_max&timezone=Asia/Kolkata&forecast_days=1`
+    );
+
+    const rainfall = weatherRes.data.daily.precipitation_sum[0] || 0;
+    const temp = weatherRes.data.daily.temperature_2m_max[0] || 30;
+
+    // AQI from AQICN
+    let aqi = 0;
+    try {
+      const aqiRes = await axios.get(
+        `https://api.waqi.info/feed/chennai/?token=${AQICN_TOKEN}`
+      );
+      aqi = aqiRes.data.data.aqi || 0;
+    } catch (e) {
+      aqi = 85; // default safe value if AQI fails
+    }
+
+    // Determine triggers
+    const rainTrigger = rainfall > 1.5;
+    const heatTrigger = temp > 42;
+    const aqiTrigger = aqi > 300;
+
+    res.json({
+      rainfall_mm: rainfall,
+      temperature_c: temp,
+      aqi: aqi,
+      triggers: {
+        rain: { active: rainTrigger, value: rainfall, threshold: 1.5, unit: 'mm' },
+        heat: { active: heatTrigger, value: temp, threshold: 42, unit: '°C' },
+        aqi:  { active: aqiTrigger, value: aqi, threshold: 300, unit: 'AQI' }
+      },
+      any_trigger_active: rainTrigger || heatTrigger || aqiTrigger,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: 'Weather API failed', details: err.message });
+  }
+});
+
 app.listen(process.env.PORT, () => {
   console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
 });
