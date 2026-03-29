@@ -297,6 +297,23 @@ nav {
   transform: translateY(-2px);
   box-shadow: 0 12px 32px rgba(245,158,11,0.4);
 }
+
+.no-trigger-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-top: 24px;
+  text-align: left;
+  backdrop-filter: blur(16px);
+}
+.no-trigger-label {
+  font-size: 11px; color: var(--amber);
+  margin-bottom: 10px;
+  text-transform: uppercase; letter-spacing: 1.5px;
+}
+.no-trigger-text { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
+
   </style>
 </head>
 <body>
@@ -362,6 +379,10 @@ nav {
         <h2 class="processing-title">GigShield AI Processing</h2>
         <p class="processing-sub">Automated claim detection in progress...</p>
         <div class="steps-list">
+          <div class="no-trigger-card" id="noTriggerCard" style="display:none;">
+      <div class="no-trigger-label">AI Explanation</div>
+      <div class="no-trigger-text" id="noTriggerReason">--</div>
+    </div>
           <div class="step-item">
             <div class="step-dot pending" id="dot1">1</div>
             <div class="step-text muted" id="txt1">Disruption signal received</div>
@@ -534,8 +555,49 @@ if (!modelData.insurance_trigger && selectedType === 'rain') {
   document.querySelector('.processing-title').textContent = 'No Disruption Today';
   document.querySelector('.processing-sub').textContent =
     `Rainfall ${modelData.predicted_rainfall_mm}mm in ${worker?.zone} — below trigger threshold. No payout needed. Coverage remains active.`;
+    document.getElementById('noTriggerCard').style.display = 'block';
+document.getElementById('noTriggerReason').textContent = 
+  `GigShield ML model predicted ${modelData.predicted_rainfall_mm ?? 0}mm rainfall in ${worker?.zone} today. Trigger requires ${worker?.risk === 'high' ? '1.5' : '3.0'}mm. Coverage active 24/7.`;
+
   return;
 }
+
+if (selectedType === 'heat' && !weatherData.triggers?.heat?.active) {
+  setStep(3, 'loading');
+  await new Promise(r => setTimeout(r, 400));
+  setStep(3, 'done');
+  setStep(4, 'loading');
+  await new Promise(r => setTimeout(r, 400));
+  setStep(4, 'done');
+  document.querySelector('.processing-icon').textContent = '✅';
+  document.querySelector('.processing-title').textContent = 'No Heat Disruption Today';
+  document.querySelector('.processing-sub').textContent =
+    `Temperature ${weatherData.temperature_c}°C in Chennai — below 42°C trigger threshold. No payout needed. Coverage remains active.`;
+    document.getElementById('noTriggerCard').style.display = 'block';
+document.getElementById('noTriggerReason').textContent = 
+  `Live weather shows ${weatherData.temperature_c}°C in Chennai today. Trigger activates at 42°C. Coverage active 24/7.`;
+
+  return;
+}
+
+// ⬇️ YE ADD KARO — AQI check
+if (selectedType === 'aqi' && !weatherData.triggers?.aqi?.active) {
+  setStep(3, 'loading');
+  await new Promise(r => setTimeout(r, 400));
+  setStep(3, 'done');
+  setStep(4, 'loading');
+  await new Promise(r => setTimeout(r, 400));
+  setStep(4, 'done');
+  document.querySelector('.processing-icon').textContent = '✅';
+  document.querySelector('.processing-title').textContent = 'No Pollution Disruption Today';
+  document.querySelector('.processing-sub').textContent =
+    `AQI ${weatherData.aqi} in Chennai — below 300 hazardous threshold. No payout needed. Coverage remains active.`;
+  document.getElementById('noTriggerCard').style.display = 'block';
+document.getElementById('noTriggerReason').textContent = 
+  `Live AQI shows ${weatherData.aqi} in Chennai today. Trigger activates at AQI 300. Coverage active 24/7.`;
+return;
+}
+
 
   // Step 3 — Worker eligibility
   setStep(3, 'loading');
