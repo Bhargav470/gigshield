@@ -294,25 +294,21 @@ app.get('/api/setup', (req, res) => {
     });
   });
 });
-// Live Weather API — Open-Meteo (free, no key) + AQICN (free token)
 app.get('/api/live-weather', async (req, res) => {
   const AQICN_TOKEN = '6c868c8980b417984c83de576bdac72bfb305d9f';
-  const LAT = 13.0827;
-  const LON = 80.2707;
 
   try {
+    // Temperature — wttr.in (completely free, no rate limit)
     const weatherRes = await axios.get(
-  `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,precipitation&timezone=Asia/Kolkata`,
-  {
-    headers: {
-      'User-Agent': 'GigShield/1.0 (gigshield-brown.vercel.app; contact@gigshield.in)'
-    },
-    timeout: 10000
-  }
-);
-    const rainfall = weatherRes.data.current.precipitation || 0;
-    const temp = weatherRes.data.current.temperature_2m || 30;
+      'https://wttr.in/Chennai?format=j1',
+      { timeout: 8000 }
+    );
 
+    const current = weatherRes.data.current_condition[0];
+    const temp = parseFloat(current.temp_C) || 30;
+    const rainfall = parseFloat(current.precipMM) || 0;
+
+    // AQI — AQICN
     let aqi = 85;
     let aqiSource = 'default';
     try {
@@ -320,7 +316,7 @@ app.get('/api/live-weather', async (req, res) => {
         `https://api.waqi.info/feed/chennai/?token=${AQICN_TOKEN}`,
         { timeout: 5000 }
       );
-      if (aqiRes.data && aqiRes.data.data && aqiRes.data.data.aqi) {
+      if (aqiRes.data?.data?.aqi) {
         aqi = aqiRes.data.data.aqi;
         aqiSource = 'live';
       }
@@ -344,7 +340,7 @@ app.get('/api/live-weather', async (req, res) => {
         aqi:  { active: aqiTrigger, value: aqi, threshold: 300, unit: 'AQI' }
       },
       any_trigger_active: rainTrigger || heatTrigger || aqiTrigger,
-      source: 'Open-Meteo + AQICN',
+      source: 'wttr.in + AQICN',
       timestamp: new Date().toISOString()
     });
 
