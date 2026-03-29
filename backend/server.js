@@ -302,9 +302,14 @@ app.get('/api/live-weather', async (req, res) => {
 
   try {
     const weatherRes = await axios.get(
-      `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,precipitation&timezone=Asia/Kolkata`
-    );
-
+  `https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current=temperature_2m,precipitation&timezone=Asia/Kolkata`,
+  {
+    headers: {
+      'User-Agent': 'GigShield/1.0 (gigshield-brown.vercel.app; contact@gigshield.in)'
+    },
+    timeout: 10000
+  }
+);
     const rainfall = weatherRes.data.current.precipitation || 0;
     const temp = weatherRes.data.current.temperature_2m || 30;
 
