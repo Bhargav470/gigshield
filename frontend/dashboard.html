@@ -393,20 +393,20 @@ nav {
       <div class="trigger-card">
         <div class="trigger-icon">🌧️</div>
         <div class="trigger-name">Heavy Rainfall</div>
-        <div class="trigger-threshold">Triggers at &gt;25mm/day</div>
-        <div class="trigger-status status-safe" id="t1">Safe</div>
+        <div class="trigger-threshold" id="t1-val">Triggers at >1.5mm/day</div>
+        <div class="trigger-status status-safe" id="t1">Checking...</div>
       </div>
       <div class="trigger-card">
         <div class="trigger-icon">🌡️</div>
         <div class="trigger-name">Extreme Heat</div>
-        <div class="trigger-threshold">Triggers at &gt;42°C</div>
-        <div class="trigger-status status-safe" id="t2">Safe</div>
+        <div class="trigger-threshold" id="t2-val">Triggers at >42°C</div>
+       <div class="trigger-status status-safe" id="t2">Checking...</div>
       </div>
       <div class="trigger-card">
         <div class="trigger-icon">💨</div>
         <div class="trigger-name">Severe Pollution</div>
-        <div class="trigger-threshold">Triggers at AQI &gt;300</div>
-        <div class="trigger-status status-safe" id="t3">Safe</div>
+        <div class="trigger-threshold" id="t3-val">Triggers at AQI >300</div>
+       <div class="trigger-status status-safe" id="t3">Checking...</div>
       </div>
       <div class="trigger-card">
         <div class="trigger-icon">🚫</div>
@@ -478,36 +478,79 @@ if (!worker) {
 
   // ML model se live disruption check
   async function checkLiveDisruptions() {
-    const today = new Date().toISOString().split('T')[0];
-    try {
-      const res = await fetch(`${API}/api/check-trigger`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zone: worker.zone, date: today })
-      });
-      const data = await res.json();
+  const today = new Date().toISOString().split('T')[0];
 
-      if (data.insurance_trigger) {
-        // Rain trigger
-        document.getElementById('t1').textContent = '🔴 TRIGGERED';
-        document.getElementById('t1').className = 'trigger-status status-danger';
-        // Show alert banner
-        document.getElementById('alertBanner').classList.add('show');
-        document.getElementById('alertText').innerHTML =
-          `⚠️ <strong>Disruption Detected:</strong> ${data.trigger_reason} in ${worker.zone} today. Auto-claim processing...`;
-      }
+  // Live weather API call
+  try {
+    const weatherRes = await fetch(`${API}/api/live-weather`);
+    const weather = await weatherRes.json();
 
-      // Update trigger tiles based on month
-      const month = new Date().getMonth() + 1;
-      if (month >= 10 && month <= 12) {
-        document.getElementById('t1').textContent = '⚠️ High Risk';
-        document.getElementById('t1').className = 'trigger-status status-warning';
-      }
-
-    } catch (err) {
-      console.log('Model check failed — using defaults');
+    // Rain tile
+    document.getElementById('t1-val').textContent = `Now: ${weather.rainfall_mm}mm | Trigger: >1.5mm`;
+    if (weather.triggers.rain.active) {
+      document.getElementById('t1').textContent = 'TRIGGERED';
+      document.getElementById('t1').className = 'trigger-status status-danger';
+    } else {
+      document.getElementById('t1').textContent = `Safe — ${weather.rainfall_mm}mm`;
+      document.getElementById('t1').className = 'trigger-status status-safe';
     }
+
+    // Heat tile
+    document.getElementById('t2-val').textContent = `Now: ${weather.temperature_c}°C | Trigger: >42°C`;
+    if (weather.triggers.heat.active) {
+      document.getElementById('t2').textContent = 'TRIGGERED';
+      document.getElementById('t2').className = 'trigger-status status-danger';
+    } else if (weather.temperature_c > 38) {
+      document.getElementById('t2').textContent = `Warning — ${weather.temperature_c}°C`;
+      document.getElementById('t2').className = 'trigger-status status-warning';
+    } else {
+      document.getElementById('t2').textContent = `Safe — ${weather.temperature_c}°C`;
+      document.getElementById('t2').className = 'trigger-status status-safe';
+    }
+
+    // AQI tile
+    document.getElementById('t3-val').textContent = `Now: AQI ${weather.aqi} | Trigger: >300`;
+    if (weather.triggers.aqi.active) {
+      document.getElementById('t3').textContent = 'TRIGGERED';
+      document.getElementById('t3').className = 'trigger-status status-danger';
+    } else if (weather.aqi > 150) {
+      document.getElementById('t3').textContent = `Warning — AQI ${weather.aqi}`;
+      document.getElementById('t3').className = 'trigger-status status-warning';
+    } else {
+      document.getElementById('t3').textContent = `Safe — AQI ${weather.aqi}`;
+      document.getElementById('t3').className = 'trigger-status status-safe';
+    }
+
+    // Alert banner agar koi trigger active hai
+    if (weather.any_trigger_active) {
+      document.getElementById('alertBanner').classList.add('show');
+      document.getElementById('alertText').innerHTML =
+        `<strong>Live Disruption Alert:</strong> Weather conditions in Chennai have crossed trigger thresholds. Auto-claim processing active.`;
+    }
+
+  } catch (err) {
+    console.log('Live weather check failed');
   }
+
+  // ML model rainfall check bhi
+  try {
+    const mlRes = await fetch(`${API}/api/check-trigger`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zone: worker.zone, date: today })
+    });
+    const data = await mlRes.json();
+    if (data.insurance_trigger) {
+      document.getElementById('t1').textContent = 'TRIGGERED';
+      document.getElementById('t1').className = 'trigger-status status-danger';
+      document.getElementById('alertBanner').classList.add('show');
+      document.getElementById('alertText').innerHTML =
+        `<strong>Disruption Detected:</strong> ${data.trigger_reason} in ${worker.zone}. Auto-claim processing...`;
+    }
+  } catch (err) {
+    console.log('ML check failed');
+  }
+}
 
   checkLiveDisruptions();
 
@@ -542,70 +585,7 @@ function logout() {
   window.location.href = 'index.html';
 }
 
-    if (!worker) {
-      window.location.href = 'onboarding.html';
-    } else {
-      // Greeting
-      const hour = new Date().getHours();
-      const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-      document.getElementById('greetingText').textContent = `${greet}, ${worker.name.split(' ')[0]}! 👋`;
-
-      const now = new Date();
-      document.getElementById('greetingDate').textContent =
-        now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-      // Nav
-      document.getElementById('navName').textContent = worker.name;
-
-      // Stats
-      document.getElementById('statPremium').textContent = worker.premium;
-      document.getElementById('statCoverage').textContent = worker.coverage.toLocaleString('en-IN');
-      document.getElementById('statZone').textContent = worker.zone + ', Chennai';
-
-      // Policy details
-      document.getElementById('pName').textContent = worker.name;
-      document.getElementById('pPlatform').textContent = worker.platform.charAt(0).toUpperCase() + worker.platform.slice(1);
-      document.getElementById('pZone').textContent = worker.zone + ', Chennai';
-      const riskColors = { high: '#EF4444', medium: '#F59E0B', low: '#10B981' };
-      document.getElementById('pRisk').textContent = worker.risk.charAt(0).toUpperCase() + worker.risk.slice(1);
-      document.getElementById('pRisk').style.color = riskColors[worker.risk];
-
-      // Show alert if high risk zone
-      if (worker.risk === 'high') {
-        document.getElementById('alertBanner').classList.add('show');
-        document.getElementById('alertText').innerHTML =
-          `<strong>High Risk Zone Alert:</strong> ${worker.zone} has historically high rainfall and flood risk. Your coverage is active and monitoring 24/7.`;
-      }
-
-      // Load payout history
-      const payouts = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');
-      if (payouts.length > 0) {
-        let total = 0;
-        let html = '';
-        payouts.forEach(p => {
-          total += p.amount;
-          html += `
-            <div class="payout-item">
-              <div class="payout-left">
-                <div class="payout-icon">${p.icon}</div>
-                <div>
-                  <div class="payout-reason">${p.reason}</div>
-                  <div class="payout-date">${p.date}</div>
-                </div>
-              </div>
-              <div class="payout-amount">+₹${p.amount}</div>
-            </div>
-          `;
-        });
-        document.getElementById('payoutHistory').innerHTML = html;
-        document.getElementById('statPayouts').textContent = total.toLocaleString('en-IN');
-      }
-    }
-
-    function logout() {
-      localStorage.removeItem('gigshield_worker');
-      window.location.href = 'index.html';
-    }
+   
   </script>
 
 </body>
