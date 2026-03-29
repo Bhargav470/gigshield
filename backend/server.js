@@ -145,26 +145,26 @@ app.post('/api/check-trigger', async (req, res) => {
 
 // ⬆️ YAHAN TAK NAYA CODE ⬆️
 
-// FRAUD DETECTION
-app.post('/api/check-fraud', (req, res) => {
+
+// FRAUD DETECTION — with Zone Solidarity Score
+app.post('/api/check-fraud', async (req, res) => {
   const { worker_phone, zone, claim_type, claim_date, delivery_count } = req.body;
 
   let fraud_score = 0;
   let flags = [];
 
-  // Check 1 — Duplicate claim same day
-  const dupQuery = `
-    SELECT COUNT(*) as count FROM claims 
-    WHERE worker_phone = ? AND claim_date = ? AND claim_type = ?
-  `;
-
-  db.query(dupQuery, [worker_phone, claim_date, claim_type], (err, results) => {
-    if (!err && results[0].count > 0) {
+  try {
+    // Layer 1 — Duplicate claim check
+    const [dupResults] = await db.promise().query(
+      'SELECT COUNT(*) as count FROM claims WHERE worker_phone = ? AND claim_date = ? AND claim_type = ?',
+      [worker_phone, claim_date, claim_type]
+    );
+    if (dupResults[0].count > 0) {
       fraud_score += 60;
-      flags.push("Duplicate claim detected for same day");
+      flags.push('Duplicate claim detected for same day');
     }
 
-    // Check 2 — High delivery count during claimed disruption
+    // Layer 2 — Delivery count validation
     if (delivery_count !== undefined) {
       if (delivery_count > 15) {
         fraud_score += 50;
@@ -175,51 +175,75 @@ app.post('/api/check-fraud', (req, res) => {
       }
     }
 
-    // Check 3 — Claim frequency check (more than 3 claims this week)
-    const freqQuery = `
-      SELECT COUNT(*) as count FROM claims
-      WHERE worker_phone = ?
-      AND claim_date >= DATE_SUB(?, INTERVAL 7 DAY)
-    `;
+    // Layer 3 — Claim frequency check
+    const [freqResults] = await db.promise().query(
+      'SELECT COUNT(*) as count FROM claims WHERE worker_phone = ? AND claim_date >= DATE_SUB(?, INTERVAL 7 DAY)',
+      [worker_phone, claim_date]
+    );
+    if (freqResults[0].count >= 3) {
+      fraud_score += 30;
+      flags.push('High claim frequency this week');
+    }
 
-    db.query(freqQuery, [worker_phone, claim_date], (err2, results2) => {
-      if (!err2 && results2[0].count >= 3) {
-        fraud_score += 30;
-        flags.push("High claim frequency this week");
-      }
+    // Layer 4 — Zone risk mismatch
+    const lowRiskZones = ['Anna Nagar', 'Nungambakkam', 'Egmore', 'Ashok Nagar', 'KK Nagar'];
+    if (lowRiskZones.includes(zone) && claim_type === 'Heavy Rainfall') {
+      fraud_score += 20;
+      flags.push(`Low risk zone (${zone}) claiming heavy rainfall`);
+    }
 
-      // Check 4 — Zone risk vs claim type mismatch
-      const lowRiskZones = ["Anna Nagar", "Nungambakkam", "Egmore", "Ashok Nagar", "KK Nagar"];
-      if (lowRiskZones.includes(zone) && claim_type === "Heavy Rainfall") {
-        fraud_score += 20;
-        flags.push(`Low risk zone (${zone}) claiming heavy rainfall`);
-      }
+    // Layer 5 — Zone Solidarity Score
+    const [activeResults] = await db.promise().query(
+      'SELECT COUNT(DISTINCT w.phone) as active FROM workers w JOIN zones z ON w.zone_id = z.id WHERE z.name = ?',
+      [zone]
+    );
+    const [claimResults] = await db.promise().query(
+      'SELECT COUNT(DISTINCT worker_phone) as claiming FROM claims WHERE zone = ? AND claim_date = ?',
+      [zone, claim_date]
+    );
 
-      // Final verdict
-      let verdict = "PASS";
-      let risk_level = "low";
+    const activeWorkers = activeResults[0].active || 1;
+    const claimingWorkers = claimResults[0].claiming || 0;
+    const solidarityScore = claimingWorkers / activeWorkers;
 
-      if (fraud_score >= 60) {
-        verdict = "HOLD";
-        risk_level = "high";
-      } else if (fraud_score >= 30) {
-        verdict = "REVIEW";
-        risk_level = "medium";
-      }
+    if (solidarityScore >= 0.4) {
+      fraud_score = Math.max(0, fraud_score - 20);
+      flags.push(`Zone solidarity confirmed — ${Math.round(solidarityScore * 100)}% workers affected`);
+    } else if (claimingWorkers > 0 && solidarityScore < 0.1) {
+      fraud_score += 15;
+      flags.push(`Low zone solidarity — only ${claimingWorkers}/${activeWorkers} workers claiming`);
+    }
 
-      res.json({
-        fraud_score,
-        risk_level,
-        verdict,
-        flags,
-        message: verdict === "PASS"
-          ? "No fraud detected — payout approved"
-          : verdict === "REVIEW"
-          ? "Manual review required"
-          : "Claim held — potential fraud detected"
-      });
+    // Final verdict
+    let verdict = 'PASS';
+    if (fraud_score >= 60) verdict = 'HOLD';
+    else if (fraud_score >= 30) verdict = 'REVIEW';
+
+    // Save claim to DB
+    await db.promise().query(
+      'INSERT INTO claims (worker_phone, zone, claim_type, claim_date, delivery_count, fraud_score, verdict) VALUES (?,?,?,?,?,?,?)',
+      [worker_phone, zone, claim_type, claim_date, delivery_count, fraud_score, verdict]
+    );
+
+    res.json({
+      fraud_score,
+      verdict,
+      flags,
+      solidarity: {
+        active_workers: activeWorkers,
+        claiming_workers: claimingWorkers,
+        solidarity_score: Math.round(solidarityScore * 100)
+      },
+      message: verdict === 'PASS'
+        ? 'No fraud detected — payout approved'
+        : verdict === 'REVIEW'
+        ? 'Manual review required'
+        : 'Claim held — potential fraud detected'
     });
-  });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 // Mock Worker ID Verification
 app.post('/api/verify-worker', (req, res) => {
@@ -248,6 +272,15 @@ app.post('/api/verify-worker', (req, res) => {
 
 app.get('/api/setup', (req, res) => {
   const queries = [
+    `CREATE TABLE IF NOT EXISTS zone_activity (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  zone VARCHAR(100),
+  activity_date DATE,
+  active_workers INT DEFAULT 0,
+  claiming_workers INT DEFAULT 0,
+  solidarity_score FLOAT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`
     `CREATE TABLE IF NOT EXISTS zones (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), city VARCHAR(100), risk_level VARCHAR(20), risk_score INT, avg_rainfall_mm FLOAT, flood_prone BOOLEAN)`,
     `CREATE TABLE IF NOT EXISTS workers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), phone VARCHAR(15), worker_id VARCHAR(50), platform VARCHAR(50), daily_income INT, zone_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS policies (id INT AUTO_INCREMENT PRIMARY KEY, worker_id INT, weekly_premium INT, coverage_amount INT, status VARCHAR(20) DEFAULT 'active', start_date DATE)`,
@@ -347,6 +380,86 @@ app.get('/api/live-weather', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Weather API failed', details: err.message });
   }
+});
+
+// Zone Solidarity Score
+app.post('/api/zone-solidarity', (req, res) => {
+  const { zone, claim_date } = req.body;
+
+  // Us zone ke aaj ke active workers count karo
+  const activeQuery = `
+    SELECT COUNT(DISTINCT w.phone) as active_count
+    FROM workers w
+    JOIN zones z ON w.zone_id = z.id
+    WHERE z.name = ?
+  `;
+
+  // Us zone ke aaj ke claiming workers count karo
+  const claimingQuery = `
+    SELECT COUNT(DISTINCT worker_phone) as claiming_count
+    FROM claims
+    WHERE zone = ? AND claim_date = ?
+  `;
+
+  db.query(activeQuery, [zone], (err, activeResults) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const activeWorkers = activeResults[0].active_count || 1;
+
+    db.query(claimingQuery, [zone, claim_date], (err2, claimResults) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+
+      const claimingWorkers = claimResults[0].claiming_count || 0;
+      const solidarityScore = claimingWorkers / activeWorkers;
+
+      // Solidarity levels:
+      // > 0.4 (40%+ workers claiming) → Real disruption confirmed
+      // 0.1 - 0.4 → Possible disruption
+      // < 0.1 → Suspicious — very few workers claiming
+
+      let solidarityVerdict = '';
+      let solidarityBonus = 0;
+
+      if (solidarityScore >= 0.4) {
+        solidarityVerdict = 'CONFIRMED';
+        solidarityBonus = -20; // fraud score kam karo — real disruption
+      } else if (solidarityScore >= 0.1) {
+        solidarityVerdict = 'POSSIBLE';
+        solidarityBonus = 0;
+      } else if (claimingWorkers === 0) {
+        solidarityVerdict = 'FIRST_CLAIM';
+        solidarityBonus = 0; // pehla claim — neutral
+      } else {
+        solidarityVerdict = 'SUSPICIOUS';
+        solidarityBonus = 15; // fraud score badhaao
+      }
+
+      // Zone activity save karo
+      db.query(
+        `INSERT INTO zone_activity (zone, activity_date, active_workers, claiming_workers, solidarity_score)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         claiming_workers = VALUES(claiming_workers),
+         solidarity_score = VALUES(solidarity_score)`,
+        [zone, claim_date, activeWorkers, claimingWorkers + 1, solidarityScore],
+        () => {}
+      );
+
+      res.json({
+        zone,
+        active_workers: activeWorkers,
+        claiming_workers: claimingWorkers,
+        solidarity_score: Math.round(solidarityScore * 100),
+        solidarity_verdict: solidarityVerdict,
+        fraud_score_adjustment: solidarityBonus,
+        message: solidarityVerdict === 'CONFIRMED'
+          ? `${Math.round(solidarityScore * 100)}% workers in ${zone} not delivering — real disruption confirmed`
+          : solidarityVerdict === 'SUSPICIOUS'
+          ? `Only ${claimingWorkers} out of ${activeWorkers} workers claiming — flagged for review`
+          : `${claimingWorkers} workers claiming in ${zone} today`
+      });
+    });
+  });
 });
 
 app.listen(process.env.PORT, () => {
