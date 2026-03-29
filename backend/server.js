@@ -62,8 +62,8 @@ app.post('/api/register', (req, res) => {
       const zone = zones[0];
 
       // Premium calculation
-      const base = 29;
-      const riskAdd = Math.round((zone.risk_score / 100) * 30);
+     const base = 49;
+const riskAdd = zone.risk_level === 'high' ? 24 : zone.risk_level === 'medium' ? 16 : 9;
       const incomeAdd = daily_income > 800 ? 10 : 0;
       const premium = base + riskAdd + incomeAdd;
       const coverage = Math.round(daily_income * 7 * 0.7);

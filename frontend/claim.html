@@ -502,16 +502,21 @@ async function startTrigger() {
   // Step 2 — ML model se verify karo
 setStep(2, 'loading');
 let modelData = { predicted_rainfall_mm: 0, trigger_reason: 'Disruption detected', insurance_trigger: true };
+let weatherData = { temperature_c: 35, aqi: 85, rainfall_mm: 0 };
 try {
   const today = new Date().toISOString().split('T')[0];
- const mlRes = await fetch('https://gigshield-backend.onrender.com/api/check-trigger', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ zone: worker?.zone || 'Velachery', date: today })
-  });
+  const [mlRes, weatherRes] = await Promise.all([
+    fetch('https://gigshield-backend.onrender.com/api/check-trigger', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zone: worker?.zone || 'Velachery', date: today })
+    }),
+    fetch('https://gigshield-backend.onrender.com/api/live-weather')
+  ]);
   modelData = await mlRes.json();
+  weatherData = await weatherRes.json();
 } catch(e) {
-  console.log('ML model unavailable — using defaults');
+  console.log('API unavailable — using defaults');
 }
 await new Promise(r => setTimeout(r, 600));
 setStep(2, 'done');
@@ -597,11 +602,20 @@ if (!modelData.insurance_trigger && selectedType === 'rain') {
 const rainfall = modelData.predicted_rainfall_mm || 0;
 const dynamicCondition = selectedType === 'rain'
   ? `Rainfall ${rainfall}mm — exceeded ${worker?.risk === 'high' ? '1.5' : '3.0'}mm threshold`
+  : selectedType === 'heat'
+  ? `Temperature ${weatherData.temperature_c}°C — ${weatherData.temperature_c > 42 ? 'exceeded 42°C threshold' : 'threshold not crossed today'}`
+  : selectedType === 'aqi'
+  ? `AQI ${weatherData.aqi} — ${weatherData.aqi > 300 ? 'exceeded 300 hazardous threshold' : 'below 300 threshold today'}`
   : d.condition;
+
 const dynamicReason = selectedType === 'rain' && modelData.insurance_trigger
   ? `${modelData.trigger_reason} in ${worker?.zone || 'your zone'}, Chennai. All delivery operations were halted. Your income protection coverage has been activated automatically.`
   : selectedType === 'rain'
   ? `Rainfall ${rainfall}mm detected in ${worker?.zone}, Chennai. Parametric trigger activated based on zone risk assessment. Your income protection coverage has been activated.`
+  : selectedType === 'heat'
+  ? `Temperature of ${weatherData.temperature_c}°C recorded in Chennai today. ${weatherData.temperature_c > 42 ? 'Outdoor delivery work deemed unsafe — income protection activated.' : 'Live data used for claim processing.'}`
+  : selectedType === 'aqi'
+  ? `Air Quality Index of ${weatherData.aqi} recorded in Chennai today. ${weatherData.aqi > 300 ? 'Hazardous conditions — delivery suspended, income protection activated.' : 'Live AQI data used for claim processing.'}`
   : d.reason;
 
 document.getElementById('dCondition').textContent = dynamicCondition;
