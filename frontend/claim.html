@@ -698,7 +698,21 @@ document.getElementById('aiReason').textContent = dynamicReason;
   });
   localStorage.setItem('gigshield_payouts', JSON.stringify(payoutHistory));
 
-  
+  // Push notification bhejo
+try {
+  await fetch(`${API}/api/send-push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      worker_phone: worker.phone,
+      title: 'GigShield — Payout Sent!',
+      body: `Rs.${amount} transferred for ${disruptions[selectedType].name}`,
+      amount: amount
+    })
+  });
+} catch(e) {
+  console.log('Push failed — continuing');
+}
   showScreen(3);
 }
 
