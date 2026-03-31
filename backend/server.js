@@ -5,6 +5,12 @@ const FLASK_MODEL_URL = 'https://gigshield-model.onrender.com';
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const webpush = require('web-push');
+webpush.setVapidDetails(
+  process.env.VAPID_EMAIL,
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
 
 
 const app = express();
@@ -283,6 +289,13 @@ app.get('/api/setup', (req, res) => {
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY zone_date (zone, activity_date)
 )`,
+`CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  worker_phone VARCHAR(15),
+  subscription TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY phone_key (worker_phone)
+)`,
     `CREATE TABLE IF NOT EXISTS zones (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), city VARCHAR(100), risk_level VARCHAR(20), risk_score INT, avg_rainfall_mm FLOAT, flood_prone BOOLEAN)`,
     `CREATE TABLE IF NOT EXISTS workers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), phone VARCHAR(15), worker_id VARCHAR(50), platform VARCHAR(50), daily_income INT, zone_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS policies (id INT AUTO_INCREMENT PRIMARY KEY, worker_id INT, weekly_premium INT, coverage_amount INT, status VARCHAR(20) DEFAULT 'active', start_date DATE)`,
@@ -464,7 +477,45 @@ app.post('/api/zone-solidarity', (req, res) => {
   });
 });
 
+// Save push subscription
+app.post('/api/save-subscription', async (req, res) => {
+  const { subscription, worker_phone } = req.body;
+  try {
+    await db.promise().query(
+      `INSERT INTO push_subscriptions (worker_phone, subscription) 
+       VALUES (?, ?) 
+       ON DUPLICATE KEY UPDATE subscription = VALUES(subscription)`,
+      [worker_phone, JSON.stringify(subscription)]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
+// Send push notification
+app.post('/api/send-push', async (req, res) => {
+  const { worker_phone, title, body, amount } = req.body;
+  try {
+    const [results] = await db.promise().query(
+      'SELECT subscription FROM push_subscriptions WHERE worker_phone = ?',
+      [worker_phone]
+    );
+    if (results.length === 0) return res.json({ success: false, message: 'No subscription found' });
+
+    const subscription = JSON.parse(results[0].subscription);
+    const payload = JSON.stringify({
+      title: title || 'GigShield Alert',
+      body: body || `Rs.${amount} transferred to your UPI`,
+      icon: '/icon-192.png'
+    });
+
+    await webpush.sendNotification(subscription, payload);
+    res.json({ success: true, message: 'Push notification sent' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.listen(process.env.PORT, () => {
   console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
