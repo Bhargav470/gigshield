@@ -472,6 +472,69 @@ app.post('/api/zone-solidarity', (req, res) => {
   });
 });
 
+// Email Notification — Payout Alert
+app.post('/api/send-notification', async (req, res) => {
+  const { worker_name, worker_email, zone, disruption_type, payout_amount, fraud_score } = req.body;
+
+  const mailOptions = {
+    from: `"GigShield" <${process.env.EMAIL_USER}>`,
+    to: worker_email,
+    subject: `GigShield — Payout of Rs.${payout_amount} Processed`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #08080A; color: #F0F0F2; padding: 32px; border-radius: 16px;">
+        
+        <h1 style="color: #F59E0B; font-size: 28px; margin-bottom: 8px;">GigShield</h1>
+        <p style="color: #6B6B7B; margin-bottom: 32px;">AI-Powered Income Protection</p>
+        
+        <div style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+          <p style="color: #6B6B7B; font-size: 13px; margin-bottom: 8px;">AMOUNT TRANSFERRED</p>
+          <h2 style="color: #10B981; font-size: 48px; margin: 0;">Rs.${payout_amount}</h2>
+          <p style="color: #6B6B7B; margin-top: 8px;">Sent to your UPI automatically</p>
+        </div>
+
+        <div style="background: #111114; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <h3 style="color: #F0F0F2; margin-bottom: 16px;">Payout Details</h3>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr style="border-top: 1px solid #1E1E24;">
+              <td style="padding: 10px 0; color: #6B6B7B;">Worker Name</td>
+              <td style="padding: 10px 0; text-align: right;">${worker_name}</td>
+            </tr>
+            <tr style="border-top: 1px solid #1E1E24;">
+              <td style="padding: 10px 0; color: #6B6B7B;">Zone</td>
+              <td style="padding: 10px 0; text-align: right;">${zone}, Chennai</td>
+            </tr>
+            <tr style="border-top: 1px solid #1E1E24;">
+              <td style="padding: 10px 0; color: #6B6B7B;">Disruption Type</td>
+              <td style="padding: 10px 0; text-align: right;">${disruption_type}</td>
+            </tr>
+            <tr style="border-top: 1px solid #1E1E24;">
+              <td style="padding: 10px 0; color: #6B6B7B;">Fraud Check</td>
+              <td style="padding: 10px 0; text-align: right; color: #10B981;">Passed ✓ (Score: ${fraud_score}/100)</td>
+            </tr>
+            <tr style="border-top: 1px solid #1E1E24;">
+              <td style="padding: 10px 0; color: #6B6B7B;">Processing Time</td>
+              <td style="padding: 10px 0; text-align: right; color: #10B981;">Under 5 minutes</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #6B6B7B; font-size: 13px; text-align: center;">
+          GigShield — Zero forms. Zero waiting. Zero hassle.<br/>
+          Your coverage remains active and monitoring 24/7.
+        </p>
+
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ success: true, message: 'Email sent successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(process.env.PORT, () => {
   console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
 });
