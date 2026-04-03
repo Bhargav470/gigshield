@@ -615,129 +615,333 @@ app.post('/api/verify-location', (req, res) => {
     fraud_add: inZone ? 0 : 40
   });
 });
-// AUTOMATED PARAMETRIC TRIGGER ENGINE
-// Har 10 minute mein chalti hai
-cron.schedule('*/10 * * * *', async () => {
-  console.log('Running automated trigger check...');
+
+// ============================================
+// AUTOMATED PARAMETRIC TRIGGER ENGINE v2
+// Har 10 min — Rain, Heat, AQI, Curfew sab check
+// Hours-based tiered payout per disruption type
+// ============================================
+
+const HOURS_PER_TICK = 10 / 60; // 0.1667 hours per 10-min tick
+
+// Payout tiers — sab disruption types ke liye same structure
+const PAYOUT_TIERS = [
+  { minHours: 8,     payout: 500, label: '8+ hours'      },
+  { minHours: 5,     payout: 300, label: '5–8 hours'     },
+  { minHours: 2,     payout: 150, label: '2–5 hours'     },
+  { minHours: 0.001, payout: 50,  label: 'Under 2 hours' },
+  { minHours: 0,     payout: 0,   label: 'No disruption' }
+];
+
+function getPayoutTier(hours) {
+  for (const tier of PAYOUT_TIERS) {
+    if (hours >= tier.minHours) return tier;
+  }
+  return { payout: 0, label: 'No disruption' };
+}
+
+// Har disruption ke trigger conditions
+// Returns { active: true/false, value, threshold, unit }
+function evaluateTriggers(weatherData, zone) {
+  const HIGH_RISK = [
+    'Velachery','Porur','Tambaram','Perungudi','Pallikaranai',
+    'Madipakkam','Madhavaram','Thiruvottiyur','Manali','Avadi',
+    'Poonamallee','Vandalur','Medavakkam','Perungalathur','Kelambakkam'
+  ];
+
+  const rainfall   = weatherData.rainfall;
+  const temp       = weatherData.temp;
+  const aqi        = weatherData.aqi;
+  const curfewZones = weatherData.curfewZones || []; // Array of zone names under curfew
+
+  const rainThreshold = HIGH_RISK.includes(zone) ? 0.5 : 1.5;
+
+  return {
+    rain: {
+      active: rainfall > rainThreshold,
+      value: rainfall,
+      threshold: rainThreshold,
+      unit: 'mm'
+    },
+    heat: {
+      active: temp > 42,
+      value: temp,
+      threshold: 42,
+      unit: '°C'
+    },
+    aqi: {
+      active: aqi > 300,
+      value: aqi,
+      threshold: 300,
+      unit: 'AQI'
+    },
+    curfew: {
+      active: curfewZones.includes(zone),
+      value: curfewZones.includes(zone) ? 1 : 0,
+      threshold: 1,
+      unit: 'zone'
+    }
+  };
+}
+
+// Weather + AQI fetch (ek baar, sab policies ke liye use hoga)
+async function fetchLiveConditions() {
+  let rainfall = 0, temp = 30, aqi = 85;
 
   try {
-    // Sab active policies fetch karo
+    const weatherRes = await axios.get('https://wttr.in/Chennai?format=j1', { timeout: 8000 });
+    const current = weatherRes.data.current_condition[0];
+    rainfall = parseFloat(current.precipMM) || 0;
+    temp     = parseFloat(current.temp_C)   || 30;
+  } catch (e) {
+    console.error('Weather fetch failed:', e.message);
+  }
+
+  try {
+    const aqiRes = await axios.get(
+      `https://api.waqi.info/feed/chennai/?token=6c868c8980b417984c83de576bdac72bfb305d9f`,
+      { timeout: 5000 }
+    );
+    if (aqiRes.data?.data?.aqi) aqi = aqiRes.data.data.aqi;
+  } catch (e) {
+    console.error('AQI fetch failed:', e.message);
+  }
+
+  // Curfew zones — DB se fetch karo (admin ne manually mark kiya ho)
+  // Agar curfew table nahi hai toh empty array return
+  let curfewZones = [];
+  try {
+    const [curfewRows] = await db.promise().query(
+      `SELECT zone_name FROM curfew_zones WHERE active = 1 AND curfew_date = CURDATE()`
+    );
+    curfewZones = curfewRows.map(r => r.zone_name);
+  } catch (e) {
+    // Table nahi hai toh ignore karo — curfew feature optional hai
+    curfewZones = [];
+  }
+
+  return { rainfall, temp, aqi, curfewZones };
+}
+
+// Core engine function
+async function runTriggerEngine() {
+  console.log(`\n[${new Date().toISOString()}] === TRIGGER ENGINE START ===`);
+
+  try {
+    // Step 1 — Live conditions fetch (sirf ek baar)
+    const conditions = await fetchLiveConditions();
+    console.log(`Weather → Rain: ${conditions.rainfall}mm | Temp: ${conditions.temp}°C | AQI: ${conditions.aqi} | Curfew zones: ${conditions.curfewZones.length}`);
+
+    // Step 2 — Sab active policies
     const [policies] = await db.promise().query(`
-      SELECT w.phone, w.name, z.name as zone, z.risk_level, 
-             p.id as policy_id, p.weekly_premium
+      SELECT w.phone, w.name, z.name as zone, z.risk_level,
+             p.id as policy_id, p.coverage_amount
       FROM policies p
       JOIN workers w ON p.worker_id = w.id
       JOIN zones z ON w.zone_id = z.id
       WHERE p.status = 'active'
     `);
 
+    console.log(`Active policies: ${policies.length}`);
     if (policies.length === 0) return;
 
-    // Live weather fetch karo
-    const weatherRes = await axios.get('https://wttr.in/Chennai?format=j1', { timeout: 8000 });
-    const current = weatherRes.data.current_condition[0];
-    const rainfall = parseFloat(current.precipMM) || 0;
-    const temp = parseFloat(current.temp_C) || 30;
-
-    // AQI fetch
-    let aqi = 85;
-    try {
-      const aqiRes = await axios.get(
-        `https://api.waqi.info/feed/chennai/?token=6c868c8980b417984c83de576bdac72bfb305d9f`,
-        { timeout: 5000 }
-      );
-      if (aqiRes.data?.data?.aqi) aqi = aqiRes.data.data.aqi;
-    } catch(e) {}
-
     const today = new Date().toISOString().split('T')[0];
-    let triggeredCount = 0;
+    const disruptionTypes = ['rain', 'heat', 'aqi', 'curfew'];
 
-    // Har policy ke liye check karo
     for (const policy of policies) {
-      const HIGH_RISK = ['Velachery','Porur','Tambaram','Perungudi','Pallikaranai',
-        'Madipakkam','Madhavaram','Thiruvottiyur','Manali','Avadi',
-        'Poonamallee','Vandalur','Medavakkam','Perungalathur','Kelambakkam'];
+      const triggers = evaluateTriggers(conditions, policy.zone);
 
-      const threshold = HIGH_RISK.includes(policy.zone) ? 1.5 : 3.0;
-      const rainTrigger = rainfall > threshold;
-      const heatTrigger = temp > 42;
-      const aqiTrigger = aqi > 300;
+      for (const type of disruptionTypes) {
+        const trigger = triggers[type];
 
-      if (!rainTrigger && !heatTrigger && !aqiTrigger) continue;
+        // Pehle log row fetch ya create karo
+        let [logs] = await db.promise().query(
+          `SELECT * FROM disruption_hours_log 
+           WHERE worker_phone = ? AND log_date = ? AND disruption_type = ?`,
+          [policy.phone, today, type]
+        );
 
-      // Duplicate check — aaj already auto-claim hua?
-      const [existing] = await db.promise().query(
-        `SELECT id FROM claims WHERE worker_phone = ? AND claim_date = ? AND claim_type LIKE 'AUTO%'`,
-        [policy.phone, today]
-      );
-      if (existing.length > 0) continue;
+        if (logs.length === 0) {
+          await db.promise().query(
+            `INSERT INTO disruption_hours_log 
+             (worker_phone, zone, log_date, disruption_type, hours_count, last_detected, current_payout, payout_released)
+             VALUES (?, ?, ?, ?, 0, NULL, 0, FALSE)`,
+            [policy.phone, policy.zone, today, type]
+          );
+          logs = [{ hours_count: 0, last_detected: null, current_payout: 0, payout_released: false }];
+        }
 
-      // Disruption type determine karo
-      let claimType = '';
-      let disruptionReason = '';
-      if (rainTrigger) {
-        claimType = 'AUTO-Heavy Rainfall';
-        disruptionReason = `Auto-detected: ${rainfall}mm rainfall in ${policy.zone}`;
-      } else if (heatTrigger) {
-        claimType = 'AUTO-Extreme Heat';
-        disruptionReason = `Auto-detected: ${temp}°C temperature in Chennai`;
-      } else if (aqiTrigger) {
-        claimType = 'AUTO-Severe AQI';
-        disruptionReason = `Auto-detected: AQI ${aqi} in Chennai`;
-      }
+        const log = logs[0];
+        let newHours = parseFloat(log.hours_count) || 0;
 
-      // Auto claim save karo
-      await db.promise().query(
-        `INSERT INTO claims (worker_phone, zone, claim_type, claim_date, delivery_count, fraud_score, verdict)
-         VALUES (?, ?, ?, ?, 0, 0, 'AUTO-PASS')`,
-        [policy.phone, policy.zone, claimType, today]
-      );
+        // Trigger active hai toh hours badhao
+        if (trigger.active) {
+          newHours = newHours + HOURS_PER_TICK;
+          console.log(`  [${type.toUpperCase()}] ${policy.name} (${policy.zone}) → ${newHours.toFixed(2)}h | Value: ${trigger.value}${trigger.unit}`);
+        }
 
-      triggeredCount++;
-      console.log(`Auto-triggered: ${policy.name} (${policy.zone}) — ${disruptionReason}`);
-    }
+        // Tier calculate karo
+        const tierInfo   = getPayoutTier(newHours);
+        const newPayout  = tierInfo.payout;
+        const prevPayout = parseInt(log.current_payout) || 0;
 
-    console.log(`Trigger check complete. ${triggeredCount}/${policies.length} policies triggered.`);
+        // Log update karo
+        await db.promise().query(
+          `UPDATE disruption_hours_log
+           SET hours_count     = ?,
+               last_detected   = ?,
+               current_payout  = ?
+           WHERE worker_phone = ? AND log_date = ? AND disruption_type = ?`,
+          [
+            newHours,
+            trigger.active ? new Date() : log.last_detected,
+            newPayout,
+            policy.phone, today, type
+          ]
+        );
+
+        // Payout tier badha? → Claim create/update karo
+        if (newPayout > prevPayout && newPayout > 0) {
+          console.log(`  PAYOUT TIER UP → ${policy.name} | ${type} | ₹${prevPayout} → ₹${newPayout} (${tierInfo.label})`);
+
+          const claimTypeTag = `AUTO-${type.toUpperCase()}-${tierInfo.label}`;
+
+          const [existingClaim] = await db.promise().query(
+            `SELECT id FROM claims 
+             WHERE worker_phone = ? AND claim_date = ? AND claim_type LIKE ?`,
+            [policy.phone, today, `AUTO-${type.toUpperCase()}%`]
+          );
+
+          if (existingClaim.length > 0) {
+            // Existing claim ka payout aur type update karo
+            await db.promise().query(
+              `UPDATE claims 
+               SET payout_amount = ?, claim_type = ?, verdict = 'AUTO-PASS'
+               WHERE worker_phone = ? AND claim_date = ? AND claim_type LIKE ?`,
+              [newPayout, claimTypeTag, policy.phone, today, `AUTO-${type.toUpperCase()}%`]
+            );
+          } else {
+            // Nayi claim
+            await db.promise().query(
+              `INSERT INTO claims 
+               (worker_phone, zone, claim_type, claim_date, delivery_count, payout_amount, fraud_score, verdict)
+               VALUES (?, ?, ?, ?, 0, ?, 0, 'AUTO-PASS')`,
+              [policy.phone, policy.zone, claimTypeTag, today, newPayout]
+            );
+          }
+
+          // Max tier (₹500) pe released mark karo
+          if (newPayout >= 500) {
+            await db.promise().query(
+              `UPDATE disruption_hours_log 
+               SET payout_released = TRUE 
+               WHERE worker_phone = ? AND log_date = ? AND disruption_type = ?`,
+              [policy.phone, today, type]
+            );
+          }
+        }
+      } // end disruption types loop
+    } // end policies loop
+
+    console.log(`=== TRIGGER ENGINE COMPLETE ===\n`);
 
   } catch (err) {
     console.error('Trigger engine error:', err.message);
   }
-});
+}
 
-// Manual trigger endpoint — testing ke liye
+// Har 10 minute mein automatic run
+cron.schedule('*/10 * * * *', runTriggerEngine);
+
+// Manual trigger — demo/testing ke liye
 app.get('/api/run-trigger-engine', async (req, res) => {
   try {
-    const [policies] = await db.promise().query(`
-      SELECT w.phone, w.name, z.name as zone, z.risk_level
-      FROM policies p
-      JOIN workers w ON p.worker_id = w.id
-      JOIN zones z ON w.zone_id = z.id
-      WHERE p.status = 'active'
-    `);
+    await runTriggerEngine();
 
-    const weatherRes = await axios.get('https://wttr.in/Chennai?format=j1', { timeout: 8000 });
-    const current = weatherRes.data.current_condition[0];
-    const rainfall = parseFloat(current.precipMM) || 0;
-    const temp = parseFloat(current.temp_C) || 30;
-
-    let aqi = 85;
-    try {
-      const aqiRes = await axios.get(
-        `https://api.waqi.info/feed/chennai/?token=6c868c8980b417984c83de576bdac72bfb305d9f`,
-        { timeout: 5000 }
-      );
-      if (aqiRes.data?.data?.aqi) aqi = aqiRes.data.data.aqi;
-    } catch(e) {}
+    const conditions  = await fetchLiveConditions();
+    const [policies]  = await db.promise().query(
+      `SELECT COUNT(*) as count FROM policies WHERE status = 'active'`
+    );
+    const [todayLogs] = await db.promise().query(
+      `SELECT worker_phone, zone, disruption_type, 
+              ROUND(hours_count,2) as hours, current_payout, payout_released
+       FROM disruption_hours_log WHERE log_date = CURDATE()
+       ORDER BY disruption_type, worker_phone`
+    );
 
     res.json({
-      active_policies: policies.length,
-      current_weather: { rainfall_mm: rainfall, temperature_c: temp, aqi },
-      rain_trigger: rainfall > 1.5,
-      heat_trigger: temp > 42,
-      aqi_trigger: aqi > 300,
-      any_trigger: rainfall > 1.5 || temp > 42 || aqi > 300,
-      message: 'Engine check complete — auto-claims will be created if triggers active'
+      status: 'Engine ran successfully',
+      live_conditions: {
+        rainfall_mm:   conditions.rainfall,
+        temperature_c: conditions.temp,
+        aqi:           conditions.aqi,
+        curfew_zones:  conditions.curfewZones
+      },
+      triggers_active: {
+        rain:   conditions.rainfall > 0.5,
+        heat:   conditions.temp    > 42,
+        aqi:    conditions.aqi     > 300,
+        curfew: conditions.curfewZones.length > 0
+      },
+      active_policies: policies[0].count,
+      today_disruption_logs: todayLogs,
+      payout_tiers: PAYOUT_TIERS
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Worker ka disruption status — sab 4 types ek saath
+app.get('/api/disruption-status/:phone', async (req, res) => {
+  const { phone } = req.params;
+  try {
+    const [logs] = await db.promise().query(
+      `SELECT disruption_type, ROUND(hours_count,2) as hours_count,
+              current_payout, payout_released, last_detected
+       FROM disruption_hours_log
+       WHERE worker_phone = ? AND log_date = CURDATE()`,
+      [phone]
+    );
+
+    // Sab 4 types ka structured response
+    const result = {};
+    const allTypes = ['rain', 'heat', 'aqi', 'curfew'];
+
+    for (const type of allTypes) {
+      const log = logs.find(l => l.disruption_type === type);
+      const hours = log ? parseFloat(log.hours_count) : 0;
+      const tierInfo = getPayoutTier(hours);
+
+      // Next tier info
+      const currentIdx = PAYOUT_TIERS.findIndex(t => t.payout === tierInfo.payout);
+      const nextTier   = currentIdx > 0 ? PAYOUT_TIERS[currentIdx - 1] : null;
+
+      result[type] = {
+        hours_accumulated: hours,
+        current_payout:    log ? log.current_payout : 0,
+        tier_label:        tierInfo.label,
+        payout_released:   log ? log.payout_released : false,
+        last_detected:     log ? log.last_detected : null,
+        next_tier: nextTier ? {
+          payout:         nextTier.payout,
+          hours_needed:   nextTier.minHours,
+          hours_remaining: Math.max(0, nextTier.minHours - hours).toFixed(1)
+        } : null
+      };
+    }
+
+    const totalPayout = Object.values(result).reduce(
+      (sum, t) => sum + (t.current_payout || 0), 0
+    );
+
+    res.json({
+      phone,
+      date: new Date().toISOString().split('T')[0],
+      disruptions: result,
+      total_payout_today: totalPayout
+    });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -746,4 +950,5 @@ app.get('/api/run-trigger-engine', async (req, res) => {
 app.listen(process.env.PORT, () => {
   console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
 });
+
 
