@@ -315,6 +315,7 @@ nav {
 .no-trigger-text { font-size: 14px; line-height: 1.65; color: var(--text-muted); }
 
   </style>
+  <script src="translations.js"></script>
 </head>
 <body>
   <div class="bg-image"></div>
@@ -329,8 +330,8 @@ nav {
 
     <!-- SCREEN 1: SELECT DISRUPTION -->
     <div class="screen active" id="screen1">
-      <h1 class="screen-title">🧪 Simulate Disruption</h1>
-      <p class="screen-sub">Select a disruption type to simulate. GigShield will automatically detect it and process your payout.</p>
+      <h1 class="screen-title" data-i18n="simulate_heading">🧪 Simulate Disruption</h1>
+      <p class="screen-sub" data-i18n="simulate_desc">Select a disruption type to simulate. GigShield will automatically detect it and process your payout.</p>
 
       <div class="disruption-list">
         <div class="disruption-item" onclick="selectDisruption(this, 'rain')">
@@ -441,6 +442,7 @@ nav {
   </div>
 
   <script>
+    applyTranslations(localStorage.getItem('gigshield_lang') || 'en');
     const worker = JSON.parse(localStorage.getItem('gigshield_worker'));
     if (!worker) window.location.href = 'onboarding.html';
 

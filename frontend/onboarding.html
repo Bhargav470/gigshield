@@ -401,7 +401,39 @@ select option { background: #111; }
 }
 
 .error-msg { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin: 32px 0;
+}
+.lang-card {
+  background: var(--surf);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  backdrop-filter: blur(16px);
+}
+.lang-card:hover {
+  border-color: var(--amber);
+  background: var(--amber-glow);
+  transform: translateY(-3px);
+}
+.lang-card.selected {
+  border-color: var(--amber);
+  background: var(--amber-glow);
+}
+.lang-flag { font-size: 36px; margin-bottom: 10px; }
+.lang-name { font-size: 18px; font-weight: 600; }
+.lang-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 </style>
+<script src="translations.js">
+</script>
+
 </head>
 <body>
   <div class="bg-image"></div>
@@ -411,6 +443,31 @@ select option { background: #111; }
     <div class="logo">Gig<span>Shield</span></div>
     <a href="index.html" class="back-btn">← Back to Home</a>
   </nav>
+
+  <!-- LANGUAGE SELECTION -->
+<div class="form-container" id="langScreen">
+  <div class="form-card">
+    <h2>Choose Your Language</h2>
+    <p class="desc">अपनी भाषा चुनें / மொழியை தேர்ந்தெடுக்கவும்</p>
+    <div class="lang-grid">
+      <div class="lang-card" onclick="selectLanguage('en')">
+        <div class="lang-flag">🇬🇧</div>
+        <div class="lang-name">English</div>
+        <div class="lang-sub">English</div>
+      </div>
+      <div class="lang-card" onclick="selectLanguage('hi')">
+        <div class="lang-flag">🇮🇳</div>
+        <div class="lang-name">हिंदी</div>
+        <div class="lang-sub">Hindi</div>
+      </div>
+      <div class="lang-card" onclick="selectLanguage('ta')">
+        <div class="lang-flag">🇮🇳</div>
+        <div class="lang-name">தமிழ்</div>
+        <div class="lang-sub">Tamil</div>
+      </div>
+    </div>
+  </div>
+</div>
 
   <div class="stepper">
     <div class="step active" id="s1">
@@ -434,10 +491,10 @@ select option { background: #111; }
 
       <!-- STEP 1 -->
       <div class="step-panel active" id="panel1">
-        <h2>Welcome, Delivery Partner 👋</h2>
-        <p class="desc">Tell us about yourself. Takes less than 2 minutes.</p>
+        <h2 data-i18n="welcome_title">Welcome, Delivery Partner 👋</h2>
+        <p class="desc" data-i18n="welcome_sub">Tell us about yourself. Takes less than 2 minutes.</p>
         <div class="field">
-          <label>Full Name</label>
+          <label data-i18n="label_name">Full Name</label>
           <input type="text" id="name" placeholder="Ramesh Kumar"/>
         </div>
         <div class="field">
@@ -525,7 +582,25 @@ select option { background: #111; }
     </div>
   </div>
 
-  <script>
+  <script>// Language setup
+const savedLang = localStorage.getItem('gigshield_lang');
+if (savedLang) {
+  document.getElementById('langScreen').style.display = 'none';
+  applyTranslations(savedLang);
+} else {
+  document.getElementById('langScreen').style.display = 'block';
+  document.querySelector('.stepper').style.display = 'none';
+  document.querySelector('.form-container:not(#langScreen)').style.display = 'none';
+}
+
+function selectLanguage(lang) {
+  localStorage.setItem('gigshield_lang', lang);
+  applyTranslations(lang);
+  document.getElementById('langScreen').style.display = 'none';
+  document.querySelector('.stepper').style.display = 'flex';
+  document.querySelector('.form-container:not(#langScreen)').style.display = 'block';
+}
+
    const API = 'https://gigshield-backend.onrender.com';
     let selectedPlatform = 'zepto';
     let selectedZoneId = null;

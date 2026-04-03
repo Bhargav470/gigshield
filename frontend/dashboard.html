@@ -319,7 +319,25 @@ nav {
   font-family: 'Syne', sans-serif;
   font-size: 18px; font-weight: 700; color: var(--green);
 }
+.lang-toggle { display: flex; gap: 8px; align-items: center; }
+.lang-btn {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.lang-btn:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
   </style>
+  <script src="translations.js"></script>
+  
 </head>
 <body>
   <div class="bg-image"></div>
@@ -331,6 +349,11 @@ nav {
       <span class="worker-name" id="navName">Loading...</span>
       <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
+    <div class="lang-toggle">
+  <button onclick="applyTranslations('en')" class="lang-btn">EN</button>
+  <button onclick="applyTranslations('hi')" class="lang-btn">HI</button>
+  <button onclick="applyTranslations('ta')" class="lang-btn">TA</button>
+</div>
   </nav>
 
   <div class="container">
@@ -372,7 +395,7 @@ nav {
     </div>
 
     <!-- POLICY DETAILS -->
-    <h2 class="section-title">Your Policy</h2>
+    <h2 class="section-title" data-i18n="policy_title">Your Policy</h2>
     <div class="policy-card">
       <div class="policy-header">
         <div class="policy-title">Weekly Income Protection</div>
@@ -388,7 +411,7 @@ nav {
     </div>
 
     <!-- DISRUPTION TRIGGERS -->
-    <h2 class="section-title">Live Disruption Monitors</h2>
+    <h2 class="section-title" data-i18n="live_monitors">Live Disruption Monitors</h2>
     <div class="triggers-grid">
       <div class="trigger-card">
         <div class="trigger-icon">🌧️</div>
@@ -426,7 +449,7 @@ nav {
     </div>
 
     <!-- PAYOUT HISTORY -->
-    <h2 class="section-title">Payout History</h2>
+    <h2 class="section-title" data-i18n="payout_history">Payout History</h2>
     <div class="history-card">
       <div id="payoutHistory">
         <div class="history-empty">No payouts yet — your coverage is active and monitoring!</div>
@@ -468,9 +491,9 @@ async function setupPushNotifications() {
   }
 }
 
-setupPushNotifications();
 
 
+applyTranslations(localStorage.getItem('gigshield_lang') || 'en');
 
     // Load worker data from localStorage
    const API = 'https://gigshield-backend.onrender.com';
@@ -589,6 +612,8 @@ if (!worker) {
 }
 
   checkLiveDisruptions();
+
+  setupPushNotifications();
 
   // Payout history
   const payouts = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');

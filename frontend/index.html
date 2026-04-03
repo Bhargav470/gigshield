@@ -408,6 +408,7 @@
       footer{padding:24px 20px;}
     }
   </style>
+  <script src="translations.js"></script>
 </head>
 <body>
 
@@ -593,6 +594,7 @@
 </footer>
 
 <script>
+  applyTranslations(localStorage.getItem('gigshield_lang') || 'en');
   // Rain drops
   const rain = document.getElementById('rainContainer');
   for(let i = 0; i < 40; i++) {
