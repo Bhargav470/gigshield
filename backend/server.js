@@ -119,7 +119,7 @@ app.get('/api/policy/:phone', (req, res) => {
 });
 
 
-// ⬇️ YAHAN SE NAYA CODE ADD KARO ⬇️
+
 
 // GET zone risk from ML model
 app.get('/api/zone-risk/:zone', async (req, res) => {
@@ -297,6 +297,20 @@ app.post('/api/verify-worker', (req, res) => {
 
 app.get('/api/setup', (req, res) => {
   const queries = [
+   `CREATE TABLE IF NOT EXISTS disruption_hours_log (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  worker_phone VARCHAR(15),
+  zone VARCHAR(100),
+  log_date DATE,
+  disruption_type VARCHAR(30),
+  hours_count FLOAT DEFAULT 0,
+  last_detected TIMESTAMP NULL,
+  current_payout INT DEFAULT 0,
+  payout_released BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY phone_date_type (worker_phone, log_date, disruption_type)
+)`,
+
     `CREATE TABLE IF NOT EXISTS zone_activity (
   id INT AUTO_INCREMENT PRIMARY KEY,
   zone VARCHAR(100),
