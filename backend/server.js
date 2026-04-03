@@ -297,6 +297,15 @@ app.post('/api/verify-worker', (req, res) => {
 
 app.get('/api/setup', (req, res) => {
   const queries = [
+   `CREATE TABLE IF NOT EXISTS curfew_zones (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  zone_name VARCHAR(100),
+  curfew_date DATE,
+  active BOOLEAN DEFAULT TRUE,
+  reason VARCHAR(200),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`,
+
    `CREATE TABLE IF NOT EXISTS disruption_hours_log (
   id INT AUTO_INCREMENT PRIMARY KEY,
   worker_phone VARCHAR(15),
