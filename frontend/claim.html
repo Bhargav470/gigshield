@@ -522,6 +522,22 @@ async function startTrigger() {
   await new Promise(r => setTimeout(r, 600));
   setStep(1, 'done');
 
+  // GPS location fetch
+let workerLat = null;
+let workerLng = null;
+try {
+  const pos = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      timeout: 5000,
+      maximumAge: 0
+    });
+  });
+  workerLat = pos.coords.latitude;
+  workerLng = pos.coords.longitude;
+} catch(e) {
+  console.log('GPS unavailable');
+}
+
   // Step 2 — ML model se verify karo
 setStep(2, 'loading');
 let modelData = { predicted_rainfall_mm: 0, trigger_reason: 'Disruption detected', insurance_trigger: true };
@@ -582,7 +598,7 @@ document.getElementById('noTriggerReason').textContent =
   return;
 }
 
-// ⬇️ YE ADD KARO — AQI check
+
 if (selectedType === 'aqi' && !weatherData.triggers?.aqi?.active) {
   setStep(3, 'loading');
   await new Promise(r => setTimeout(r, 400));
@@ -618,7 +634,9 @@ return;
         zone: worker?.zone || 'Velachery',
         claim_type: disruptions[selectedType].name,
         claim_date: new Date().toISOString().split('T')[0],
-        delivery_count: Math.floor(Math.random() * 5) // mock — low delivery count
+        delivery_count: Math.floor(Math.random() * 5), // mock — low delivery count
+        latitude: workerLat,    
+        longitude: workerLng
       })
     });
     fraudResult = await fraudRes.json();

@@ -150,7 +150,7 @@ app.post('/api/check-trigger', async (req, res) => {
   }
 });
 
-// ⬆️ YAHAN TAK NAYA CODE ⬆️
+
 
 
 // FRAUD DETECTION — with Zone Solidarity Score
@@ -209,6 +209,7 @@ app.post('/api/check-fraud', async (req, res) => {
       [zone, claim_date]
     );
 
+
     const activeWorkers = activeResults[0].active || 1;
     const claimingWorkers = claimResults[0].claiming || 0;
     const solidarityScore = claimingWorkers / activeWorkers;
@@ -220,6 +221,23 @@ app.post('/api/check-fraud', async (req, res) => {
       fraud_score += 15;
       flags.push(`Low zone solidarity — only ${claimingWorkers}/${activeWorkers} workers claiming`);
     }
+
+    // Layer 6 — GPS Location check
+if (req.body.latitude && req.body.longitude) {
+  const zoneData = ZONE_COORDINATES[zone];
+  if (zoneData) {
+    const distance = getDistance(
+      req.body.latitude, req.body.longitude,
+      zoneData.lat, zoneData.lng
+    );
+    if (distance > zoneData.radius) {
+      fraud_score += 40;
+      flags.push(`GPS mismatch — worker is ${distance.toFixed(1)}km away from ${zone}`);
+    } else {
+      flags.push(`GPS verified — worker confirmed in ${zone} (${distance.toFixed(1)}km)`);
+    }
+  }
+}
 
     // Final verdict
     let verdict = 'PASS';
@@ -515,6 +533,87 @@ app.post('/api/send-push', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+// Zone coordinates — Chennai zones ke lat/lng
+const ZONE_COORDINATES = {
+  'Velachery': { lat: 12.9815, lng: 80.2180, radius: 3 },
+  'T Nagar': { lat: 13.0418, lng: 80.2341, radius: 2.5 },
+  'Anna Nagar': { lat: 13.0850, lng: 80.2101, radius: 3 },
+  'Porur': { lat: 13.0359, lng: 80.1566, radius: 3 },
+  'Adyar': { lat: 13.0012, lng: 80.2565, radius: 2.5 },
+  'Tambaram': { lat: 12.9249, lng: 80.1000, radius: 4 },
+  'Sholinganallur': { lat: 12.9010, lng: 80.2279, radius: 3 },
+  'Chromepet': { lat: 12.9516, lng: 80.1462, radius: 2.5 },
+  'Perungudi': { lat: 12.9563, lng: 80.2369, radius: 2.5 },
+  'Pallikaranai': { lat: 12.9372, lng: 80.2075, radius: 3 },
+  'Madipakkam': { lat: 12.9602, lng: 80.1985, radius: 2.5 },
+  'Guindy': { lat: 13.0067, lng: 80.2206, radius: 2.5 },
+  'Nungambakkam': { lat: 13.0569, lng: 80.2425, radius: 2 },
+  'Egmore': { lat: 13.0732, lng: 80.2609, radius: 2 },
+  'Mylapore': { lat: 13.0368, lng: 80.2676, radius: 2 },
+  'Royapettah': { lat: 13.0524, lng: 80.2607, radius: 2 },
+  'Kodambakkam': { lat: 13.0490, lng: 80.2213, radius: 2.5 },
+  'Virugambakkam': { lat: 13.0569, lng: 80.1971, radius: 2.5 },
+  'Saligramam': { lat: 13.0490, lng: 80.1895, radius: 2 },
+  'Vadapalani': { lat: 13.0501, lng: 80.2124, radius: 2 },
+  'Ashok Nagar': { lat: 13.0297, lng: 80.2094, radius: 2 },
+  'KK Nagar': { lat: 13.0423, lng: 80.1928, radius: 2 },
+  'Arumbakkam': { lat: 13.0694, lng: 80.2067, radius: 2 },
+  'Villivakkam': { lat: 13.1023, lng: 80.2167, radius: 2.5 },
+  'Perambur': { lat: 13.1165, lng: 80.2337, radius: 2.5 },
+  'Kolathur': { lat: 13.1167, lng: 80.2152, radius: 2.5 },
+  'Madhavaram': { lat: 13.1489, lng: 80.2317, radius: 3 },
+  'Thiruvottiyur': { lat: 13.1624, lng: 80.3005, radius: 3 },
+  'Manali': { lat: 13.1651, lng: 80.2636, radius: 3 },
+  'Ambattur': { lat: 13.1143, lng: 80.1548, radius: 3.5 },
+  'Avadi': { lat: 13.1149, lng: 80.1047, radius: 4 },
+  'Poonamallee': { lat: 13.0466, lng: 80.1165, radius: 3.5 },
+  'Vandalur': { lat: 12.8904, lng: 80.0810, radius: 4 },
+  'Medavakkam': { lat: 12.9201, lng: 80.1928, radius: 3 },
+  'Perungalathur': { lat: 12.9058, lng: 80.1367, radius: 3 },
+  'Urapakkam': { lat: 12.8686, lng: 80.0643, radius: 3 },
+  'Guduvanchery': { lat: 12.8451, lng: 80.0595, radius: 3.5 },
+  'Kelambakkam': { lat: 12.7806, lng: 80.2197, radius: 4 },
+  'Siruseri': { lat: 12.8271, lng: 80.2268, radius: 3.5 },
+  'Navalur': { lat: 12.8448, lng: 80.2271, radius: 3 }
+};
+
+// Haversine formula — distance between 2 coordinates in km
+function getDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// GPS Verify route
+app.post('/api/verify-location', (req, res) => {
+  const { zone, latitude, longitude } = req.body;
+
+  if (!latitude || !longitude) {
+    return res.json({ verified: false, reason: 'Location not provided', fraud_add: 20 });
+  }
+
+  const zoneData = ZONE_COORDINATES[zone];
+  if (!zoneData) {
+    return res.json({ verified: true, reason: 'Zone not in GPS database', fraud_add: 0 });
+  }
+
+  const distance = getDistance(latitude, longitude, zoneData.lat, zoneData.lng);
+  const inZone = distance <= zoneData.radius;
+
+  res.json({
+    verified: inZone,
+    distance_km: Math.round(distance * 10) / 10,
+    zone_radius_km: zoneData.radius,
+    reason: inZone
+      ? `Worker confirmed in ${zone} zone (${distance.toFixed(1)}km from center)`
+      : `Worker is ${distance.toFixed(1)}km away from ${zone} — outside zone radius`,
+    fraud_add: inZone ? 0 : 40
+  });
 });
 
 app.listen(process.env.PORT, () => {
