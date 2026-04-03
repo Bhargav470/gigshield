@@ -1,5 +1,5 @@
 require('dotenv').config();
-
+const cron = require('node-cron');
 const axios = require('axios');
 const FLASK_MODEL_URL = 'https://gigshield-model.onrender.com';
 const express = require('express');
@@ -614,6 +614,133 @@ app.post('/api/verify-location', (req, res) => {
       : `Worker is ${distance.toFixed(1)}km away from ${zone} — outside zone radius`,
     fraud_add: inZone ? 0 : 40
   });
+});
+// AUTOMATED PARAMETRIC TRIGGER ENGINE
+// Har 10 minute mein chalti hai
+cron.schedule('*/10 * * * *', async () => {
+  console.log('Running automated trigger check...');
+
+  try {
+    // Sab active policies fetch karo
+    const [policies] = await db.promise().query(`
+      SELECT w.phone, w.name, z.name as zone, z.risk_level, 
+             p.id as policy_id, p.weekly_premium
+      FROM policies p
+      JOIN workers w ON p.worker_id = w.id
+      JOIN zones z ON w.zone_id = z.id
+      WHERE p.status = 'active'
+    `);
+
+    if (policies.length === 0) return;
+
+    // Live weather fetch karo
+    const weatherRes = await axios.get('https://wttr.in/Chennai?format=j1', { timeout: 8000 });
+    const current = weatherRes.data.current_condition[0];
+    const rainfall = parseFloat(current.precipMM) || 0;
+    const temp = parseFloat(current.temp_C) || 30;
+
+    // AQI fetch
+    let aqi = 85;
+    try {
+      const aqiRes = await axios.get(
+        `https://api.waqi.info/feed/chennai/?token=6c868c8980b417984c83de576bdac72bfb305d9f`,
+        { timeout: 5000 }
+      );
+      if (aqiRes.data?.data?.aqi) aqi = aqiRes.data.data.aqi;
+    } catch(e) {}
+
+    const today = new Date().toISOString().split('T')[0];
+    let triggeredCount = 0;
+
+    // Har policy ke liye check karo
+    for (const policy of policies) {
+      const HIGH_RISK = ['Velachery','Porur','Tambaram','Perungudi','Pallikaranai',
+        'Madipakkam','Madhavaram','Thiruvottiyur','Manali','Avadi',
+        'Poonamallee','Vandalur','Medavakkam','Perungalathur','Kelambakkam'];
+
+      const threshold = HIGH_RISK.includes(policy.zone) ? 1.5 : 3.0;
+      const rainTrigger = rainfall > threshold;
+      const heatTrigger = temp > 42;
+      const aqiTrigger = aqi > 300;
+
+      if (!rainTrigger && !heatTrigger && !aqiTrigger) continue;
+
+      // Duplicate check — aaj already auto-claim hua?
+      const [existing] = await db.promise().query(
+        `SELECT id FROM claims WHERE worker_phone = ? AND claim_date = ? AND claim_type LIKE 'AUTO%'`,
+        [policy.phone, today]
+      );
+      if (existing.length > 0) continue;
+
+      // Disruption type determine karo
+      let claimType = '';
+      let disruptionReason = '';
+      if (rainTrigger) {
+        claimType = 'AUTO-Heavy Rainfall';
+        disruptionReason = `Auto-detected: ${rainfall}mm rainfall in ${policy.zone}`;
+      } else if (heatTrigger) {
+        claimType = 'AUTO-Extreme Heat';
+        disruptionReason = `Auto-detected: ${temp}°C temperature in Chennai`;
+      } else if (aqiTrigger) {
+        claimType = 'AUTO-Severe AQI';
+        disruptionReason = `Auto-detected: AQI ${aqi} in Chennai`;
+      }
+
+      // Auto claim save karo
+      await db.promise().query(
+        `INSERT INTO claims (worker_phone, zone, claim_type, claim_date, delivery_count, fraud_score, verdict)
+         VALUES (?, ?, ?, ?, 0, 0, 'AUTO-PASS')`,
+        [policy.phone, policy.zone, claimType, today]
+      );
+
+      triggeredCount++;
+      console.log(`Auto-triggered: ${policy.name} (${policy.zone}) — ${disruptionReason}`);
+    }
+
+    console.log(`Trigger check complete. ${triggeredCount}/${policies.length} policies triggered.`);
+
+  } catch (err) {
+    console.error('Trigger engine error:', err.message);
+  }
+});
+
+// Manual trigger endpoint — testing ke liye
+app.get('/api/run-trigger-engine', async (req, res) => {
+  try {
+    const [policies] = await db.promise().query(`
+      SELECT w.phone, w.name, z.name as zone, z.risk_level
+      FROM policies p
+      JOIN workers w ON p.worker_id = w.id
+      JOIN zones z ON w.zone_id = z.id
+      WHERE p.status = 'active'
+    `);
+
+    const weatherRes = await axios.get('https://wttr.in/Chennai?format=j1', { timeout: 8000 });
+    const current = weatherRes.data.current_condition[0];
+    const rainfall = parseFloat(current.precipMM) || 0;
+    const temp = parseFloat(current.temp_C) || 30;
+
+    let aqi = 85;
+    try {
+      const aqiRes = await axios.get(
+        `https://api.waqi.info/feed/chennai/?token=6c868c8980b417984c83de576bdac72bfb305d9f`,
+        { timeout: 5000 }
+      );
+      if (aqiRes.data?.data?.aqi) aqi = aqiRes.data.data.aqi;
+    } catch(e) {}
+
+    res.json({
+      active_policies: policies.length,
+      current_weather: { rainfall_mm: rainfall, temperature_c: temp, aqi },
+      rain_trigger: rainfall > 1.5,
+      heat_trigger: temp > 42,
+      aqi_trigger: aqi > 300,
+      any_trigger: rainfall > 1.5 || temp > 42 || aqi > 300,
+      message: 'Engine check complete — auto-claims will be created if triggers active'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(process.env.PORT, () => {
