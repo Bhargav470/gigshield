@@ -251,7 +251,7 @@ Push Notifications: Web Push API + VAPID
 - Zone Solidarity Score — Layer 5 fraud detection using cross-worker behavior
 - GPS Location Verification — Layer 6 fraud detection using Haversine formula
 - 40 zone GPS coordinates with radius boundaries defined
-- Automated Parametric Trigger Engine — cron job every 10 minutes
+- Automated Parametric Trigger Engine — cron job every 10 minutes(https://gigshield-backend.onrender.com/api/run-trigger-engine)
 - Manual trigger engine test endpoint for verification
 - Multilingual support — English, Hindi, Tamil across all 4 pages
 - Language selection screen on first visit — saves preference in localStorage
