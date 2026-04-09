@@ -541,8 +541,8 @@ if (!worker) {
 
   // Live weather API call
   try {
-    const weatherRes = await fetch(`${API}/api/live-weather`);
-    const weather = await weatherRes.json();
+    const city = worker.city || 'Chennai';
+    const weatherRes = await fetch(`${API}/api/live-weather?city=${encodeURIComponent(city)}`);
 
     // Rain tile
     document.getElementById('t1-val').textContent = `Now: ${weather.rainfall_mm}mm | Trigger: >1.5mm`;

@@ -41,9 +41,18 @@ db.getConnection((err, connection) => {
   connection.release();
 });
 
-// GET all zones
+// GET zones by city
 app.get('/api/zones', (req, res) => {
-  db.query("SELECT * FROM zones WHERE city = 'Chennai'", (err, results) =>  {
+  const city = req.query.city || 'Chennai';
+  db.query("SELECT * FROM zones WHERE city = ?", [city], (err, results) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(results);
+  });
+});
+
+// GET all supported cities
+app.get('/api/cities', (req, res) => {
+  db.query("SELECT DISTINCT city, COUNT(*) as zone_count FROM zones GROUP BY city", (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
@@ -339,6 +348,143 @@ app.get('/api/setup', (req, res) => {
     ('Perungalathur','Chennai','high',77,131.5,1),('Urapakkam','Chennai','medium',63,104.8,0),
     ('Guduvanchery','Chennai','medium',61,101.3,0),('Kelambakkam','Chennai','high',74,126.9,1),
     ('Siruseri','Chennai','medium',49,87.4,0),('Navalur','Chennai','low',40,78.6,0)`
+
+    // Mumbai zones
+`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
+('Andheri','Mumbai','high',82,185.2,1),
+('Bandra','Mumbai','medium',65,142.3,0),
+('Dharavi','Mumbai','high',88,195.5,1),
+('Kurla','Mumbai','high',80,178.4,1),
+('Dadar','Mumbai','medium',60,138.2,0),
+('Sion','Mumbai','high',78,172.1,1),
+('Worli','Mumbai','medium',55,128.6,0),
+('Lower Parel','Mumbai','medium',58,132.4,0),
+('Malad','Mumbai','high',75,165.3,1),
+('Borivali','Mumbai','medium',62,145.7,0),
+('Kandivali','Mumbai','medium',60,140.2,0),
+('Goregaon','Mumbai','medium',63,147.8,0),
+('Jogeshwari','Mumbai','high',77,168.9,1),
+('Santacruz','Mumbai','medium',57,130.5,0),
+('Vile Parle','Mumbai','medium',56,129.3,0),
+('Powai','Mumbai','high',79,174.6,1),
+('Vikhroli','Mumbai','high',76,166.8,1),
+('Ghatkopar','Mumbai','high',80,179.2,1),
+('Mulund','Mumbai','medium',64,148.5,0),
+('Thane','Mumbai','high',83,188.3,1),
+('Navi Mumbai','Mumbai','medium',61,142.9,0),
+('Panvel','Mumbai','medium',59,136.7,0),
+('Mira Road','Mumbai','medium',63,146.3,0),
+('Vasai','Mumbai','high',77,169.4,1),
+('Virar','Mumbai','medium',65,151.2,0),
+('Kalyan','Mumbai','high',81,182.7,1),
+('Dombivli','Mumbai','high',79,175.3,1),
+('Ulhasnagar','Mumbai','high',82,184.6,1),
+('Ambernath','Mumbai','medium',66,153.8,0),
+('Badlapur','Mumbai','medium',64,149.2,0),
+('Kharghar','Mumbai','medium',60,139.5,0),
+('Belapur','Mumbai','medium',58,134.8,0),
+('Airoli','Mumbai','medium',62,144.7,0),
+('Vashi','Mumbai','medium',61,142.1,0),
+('Kopar Khairane','Mumbai','medium',59,137.3,0)`,
+
+// Delhi zones
+`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
+('Connaught Place','Delhi','low',25,58.4,0),
+('Dwarka','Delhi','medium',52,95.7,0),
+('Rohini','Delhi','medium',55,98.3,0),
+('Pitampura','Delhi','medium',50,92.1,0),
+('Janakpuri','Delhi','medium',53,96.4,0),
+('Rajouri Garden','Delhi','low',35,68.2,0),
+('Karol Bagh','Delhi','low',30,62.5,0),
+('Saket','Delhi','medium',48,88.6,0),
+('Vasant Kunj','Delhi','medium',50,91.3,0),
+('Mehrauli','Delhi','medium',52,94.7,0),
+('Hauz Khas','Delhi','low',38,72.4,0),
+('Lajpat Nagar','Delhi','low',32,64.8,0),
+('Greater Kailash','Delhi','low',28,60.2,0),
+('Nehru Place','Delhi','low',30,62.9,0),
+('Okhla','Delhi','medium',55,99.1,0),
+('Shahdara','Delhi','medium',58,103.4,0),
+('Preet Vihar','Delhi','medium',54,97.6,0),
+('Mayur Vihar','Delhi','medium',56,100.2,0),
+('Patparganj','Delhi','high',65,118.7,1),
+('Noida Sector 18','Delhi','medium',52,94.3,0),
+('Noida Sector 62','Delhi','medium',50,91.8,0),
+('Greater Noida','Delhi','medium',48,88.2,0),
+('Gurgaon','Delhi','medium',53,96.8,0),
+('Faridabad','Delhi','medium',55,99.4,0),
+('Ghaziabad','Delhi','high',62,112.5,1),
+('Loni','Delhi','high',65,117.8,1),
+('Bahadurgarh','Delhi','medium',52,94.6,0),
+('Narela','Delhi','medium',50,91.2,0),
+('Bawana','Delhi','medium',53,96.1,0),
+('Najafgarh','Delhi','high',68,122.4,1),
+('Mundka','Delhi','medium',55,99.7,0),
+('Vikaspuri','Delhi','medium',52,94.9,0),
+('Uttam Nagar','Delhi','medium',54,97.3,0),
+('Bindapur','Delhi','medium',53,96.5,0),
+('Dwarka Mor','Delhi','medium',51,93.2,0)`,
+
+// Bengaluru zones
+`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
+('Koramangala','Bengaluru','high',78,142.5,1),
+('Indiranagar','Bengaluru','medium',58,108.3,0),
+('Whitefield','Bengaluru','high',75,138.7,1),
+('Electronic City','Bengaluru','medium',60,112.4,0),
+('HSR Layout','Bengaluru','high',80,145.2,1),
+('BTM Layout','Bengaluru','high',77,140.8,1),
+('Jayanagar','Bengaluru','medium',55,103.6,0),
+('JP Nagar','Bengaluru','medium',57,106.9,0),
+('Banashankari','Bengaluru','medium',56,105.2,0),
+('Rajajinagar','Bengaluru','medium',52,98.7,0),
+('Malleshwaram','Bengaluru','low',35,68.4,0),
+('Hebbal','Bengaluru','high',72,132.6,1),
+('Yelahanka','Bengaluru','medium',60,112.8,0),
+('Marathahalli','Bengaluru','high',76,139.4,1),
+('Bellandur','Bengaluru','high',82,148.6,1),
+('Sarjapur','Bengaluru','high',79,144.3,1),
+('Bommanahalli','Bengaluru','high',74,136.8,1),
+('Hongasandra','Bengaluru','medium',62,115.4,0),
+('Bannerghatta','Bengaluru','medium',58,108.7,0),
+('Anekal','Bengaluru','medium',55,103.2,0),
+('Domlur','Bengaluru','medium',57,106.5,0),
+('Shivajinagar','Bengaluru','low',32,64.8,0),
+('MG Road','Bengaluru','low',28,58.3,0),
+('Ulsoor','Bengaluru','medium',52,98.4,0),
+('Richmond Town','Bengaluru','low',30,61.7,0),
+('Kadugodi','Bengaluru','high',73,134.5,1),
+('Varthur','Bengaluru','high',78,142.8,1),
+('Hoodi','Bengaluru','high',75,138.2,1),
+('KR Puram','Bengaluru','high',70,128.6,1),
+('Banaswadi','Bengaluru','medium',63,117.3,0)`,
+
+// Hyderabad zones
+`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
+('Banjara Hills','Hyderabad','medium',55,98.4,0),
+('Jubilee Hills','Hyderabad','medium',52,94.7,0),
+('Gachibowli','Hyderabad','high',72,128.6,1),
+('Hitech City','Hyderabad','medium',60,108.3,0),
+('Kondapur','Hyderabad','high',75,132.4,1),
+('Madhapur','Hyderabad','medium',62,112.7,0),
+('Kukatpally','Hyderabad','high',78,138.5,1),
+('KPHB','Hyderabad','high',76,135.2,1),
+('Miyapur','Hyderabad','medium',65,116.4,0),
+('Bachupally','Hyderabad','medium',63,113.8,0),
+('Secunderabad','Hyderabad','medium',55,98.9,0),
+('Begumpet','Hyderabad','medium',52,94.3,0),
+('Ameerpet','Hyderabad','medium',50,91.6,0),
+('SR Nagar','Hyderabad','medium',53,96.2,0),
+('Erragadda','Hyderabad','medium',55,99.4,0),
+('Moosapet','Hyderabad','high',70,124.8,1),
+('Borabanda','Hyderabad','high',72,128.3,1),
+('LB Nagar','Hyderabad','high',75,132.9,1),
+('Dilsukhnagar','Hyderabad','high',78,138.7,1),
+('Kothapet','Hyderabad','high',76,135.8,1),
+('Uppal','Hyderabad','high',80,142.4,1),
+('Nacharam','Hyderabad','high',77,137.6,1),
+('Boduppal','Hyderabad','medium',65,116.9,0),
+('Peerzadiguda','Hyderabad','medium',63,113.4,0),
+('Hayathnagar','Hyderabad','medium',60,108.7,0)`
   ];
 
   let completed = 0;
@@ -360,13 +506,14 @@ app.get('/api/setup', (req, res) => {
     });
   });
 });
+
 app.get('/api/live-weather', async (req, res) => {
+  const city = req.query.city || 'Chennai';
   const AQICN_TOKEN = '6c868c8980b417984c83de576bdac72bfb305d9f';
 
   try {
-    // Temperature — wttr.in (completely free, no rate limit)
     const weatherRes = await axios.get(
-      'https://wttr.in/Chennai?format=j1',
+      `https://wttr.in/${encodeURIComponent(city)}?format=j1`,
       { timeout: 8000 }
     );
 
@@ -374,42 +521,38 @@ app.get('/api/live-weather', async (req, res) => {
     const temp = parseFloat(current.temp_C) || 30;
     const rainfall = parseFloat(current.precipMM) || 0;
 
-    // AQI — AQICN
     let aqi = 85;
     let aqiSource = 'default';
     try {
       const aqiRes = await axios.get(
-        `https://api.waqi.info/feed/chennai/?token=${AQICN_TOKEN}`,
+        `https://api.waqi.info/feed/${encodeURIComponent(city)}/?token=${AQICN_TOKEN}`,
         { timeout: 5000 }
       );
       if (aqiRes.data?.data?.aqi) {
         aqi = aqiRes.data.data.aqi;
         aqiSource = 'live';
       }
-    } catch (e) {
-      aqi = 85;
-      aqiSource = 'default';
-    }
+    } catch (e) {}
 
     const rainTrigger = rainfall > 1.5;
     const heatTrigger = temp > 42;
     const aqiTrigger = aqi > 300;
 
     res.json({
+      city,
       rainfall_mm: rainfall,
       temperature_c: temp,
-      aqi: aqi,
+      aqi,
       aqi_source: aqiSource,
       triggers: {
         rain: { active: rainTrigger, value: rainfall, threshold: 1.5, unit: 'mm' },
         heat: { active: heatTrigger, value: temp, threshold: 42, unit: 'C' },
-        aqi:  { active: aqiTrigger, value: aqi, threshold: 300, unit: 'AQI' }
+        aqi: { active: aqiTrigger, value: aqi, threshold: 300, unit: 'AQI' }
       },
       any_trigger_active: rainTrigger || heatTrigger || aqiTrigger,
       source: 'wttr.in + AQICN',
       timestamp: new Date().toISOString()
     });
-
   } catch (err) {
     res.status(500).json({ error: 'Weather API failed', details: err.message });
   }
