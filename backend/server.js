@@ -347,7 +347,7 @@ app.get('/api/setup', (req, res) => {
     ('Vandalur','Chennai','high',71,120.7,1),('Medavakkam','Chennai','high',83,140.2,1),
     ('Perungalathur','Chennai','high',77,131.5,1),('Urapakkam','Chennai','medium',63,104.8,0),
     ('Guduvanchery','Chennai','medium',61,101.3,0),('Kelambakkam','Chennai','high',74,126.9,1),
-    ('Siruseri','Chennai','medium',49,87.4,0),('Navalur','Chennai','low',40,78.6,0)`
+    ('Siruseri','Chennai','medium',49,87.4,0),('Navalur','Chennai','low',40,78.6,0)`,
 
     // Mumbai zones
 `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
