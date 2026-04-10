@@ -431,8 +431,6 @@ select option { background: #111; }
 .lang-name { font-size: 18px; font-weight: 600; }
 .lang-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 </style>
-<script src="translations.js">
-</script>
 
 </head>
 <body>
@@ -527,21 +525,23 @@ select option { background: #111; }
         <div class="error-msg" id="err1">Please fill all fields!</div>
         <button class="btn-primary" onclick="goToStep2()">Continue →</button>
       </div>
-      <div class="field">
-  <label data-i18n="label_city">YOUR CITY</label>
-  <select id="city" onchange="onCityChange()">
-    <option value="Chennai">Chennai, Tamil Nadu</option>
-    <option value="Mumbai">Mumbai, Maharashtra</option>
-    <option value="Delhi">Delhi, NCR</option>
-    <option value="Bengaluru">Bengaluru, Karnataka</option>
-    <option value="Hyderabad">Hyderabad, Telangana</option>
-  </select>
-</div>
+     
 
       <!-- STEP 2 -->
       <div class="step-panel" id="panel2">
         <h2>Select Your Zone 📍</h2>
-        <p class="desc">Choose the Chennai area where you deliver. Risk is calculated from our database.</p>
+        <p class="desc">Choose the  area where you deliver. Risk is calculated from our database.</p>
+        <div class="field">
+          <label data-i18n="label_city">YOUR CITY</label>
+          <select id="city" onchange="onCityChange(); loadZones();">
+            <option value="Chennai">Chennai, Tamil Nadu</option>
+            <option value="Mumbai">Mumbai, Maharashtra</option>
+            <option value="Delhi">Delhi, NCR</option>
+            <option value="Bengaluru">Bengaluru, Karnataka</option>
+            <option value="Hyderabad">Hyderabad, Telangana</option>
+          </select>
+        </div>
+
         <div class="zone-grid" id="zoneGrid">
           <div class="loading">Loading zones from database...</div>
         </div>
@@ -591,18 +591,19 @@ select option { background: #111; }
 
     </div>
   </div>
-
+<script src="translations.js"></script>
   <script>// Language setup
-const savedLang = localStorage.getItem('gigshield_lang');
-if (savedLang) {
-  document.getElementById('langScreen').style.display = 'none';
-  applyTranslations(savedLang);
-} else {
-  document.getElementById('langScreen').style.display = 'block';
-  document.querySelector('.stepper').style.display = 'none';
-  document.querySelector('.form-container:not(#langScreen)').style.display = 'none';
-}
-
+document.addEventListener('DOMContentLoaded', () => {
+  const savedLang = localStorage.getItem('gigshield_lang');
+  if (savedLang) {
+    document.getElementById('langScreen').style.display = 'none';
+    applyTranslations(savedLang);
+  } else {
+    document.getElementById('langScreen').style.display = 'block';
+    document.querySelector('.stepper').style.display = 'none';
+    document.querySelector('.form-container:not(#langScreen)').style.display = 'none';
+  }
+});
 function selectLanguage(lang) {
   localStorage.setItem('gigshield_lang', lang);
   applyTranslations(lang);
@@ -626,7 +627,8 @@ function selectLanguage(lang) {
 }
 
 async function loadZones() {
-  const city = document.getElementById('city').value || 'Chennai';
+  const cityEl = document.getElementById('city');
+  const city = cityEl ? cityEl.value : 'Chennai';
   try {
     const res = await fetch(`${API}/api/zones?city=${encodeURIComponent(city)}`);
     const zones = await res.json();
