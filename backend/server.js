@@ -339,25 +339,7 @@ app.get('/api/setup', async (req, res) => {
   });
 });
 
-  let completed = 0;
-  const total = queries.length;
-  let hasError = false;
-
-  queries.forEach(q => {
-    db.query(q, (err) => {
-      if (err && !hasError) {
-        hasError = true;
-        console.error(err);
-        res.status(500).json({ error: err.message });
-      } else {
-        completed++;
-        if (completed === total && !hasError) {
-          res.json({ success: true, message: 'All tables and zones created!' });
-        }
-      }
-    });
-  });
-});
+  
 
 app.get('/api/live-weather', async (req, res) => {
   const city = req.query.city || 'Chennai';
