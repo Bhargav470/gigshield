@@ -304,188 +304,40 @@ app.post('/api/verify-worker', (req, res) => {
   res.json({ isValid, message });
 });
 
-app.get('/api/setup', (req, res) => {
+app.get('/api/setup', async (req, res) => {
+  const results = [];
+  
   const queries = [
-    `CREATE TABLE IF NOT EXISTS zone_activity (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  zone VARCHAR(100),
-  activity_date DATE,
-  active_workers INT DEFAULT 0,
-  claiming_workers INT DEFAULT 0,
-  solidarity_score FLOAT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY zone_date (zone, activity_date)
-)`,
-`CREATE TABLE IF NOT EXISTS push_subscriptions (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  worker_phone VARCHAR(15),
-  subscription TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY phone_key (worker_phone)
-)`,
+    `CREATE TABLE IF NOT EXISTS zone_activity (id INT AUTO_INCREMENT PRIMARY KEY, zone VARCHAR(100), activity_date DATE, active_workers INT DEFAULT 0, claiming_workers INT DEFAULT 0, solidarity_score FLOAT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY zone_date (zone, activity_date))`,
     `CREATE TABLE IF NOT EXISTS zones (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), city VARCHAR(100), risk_level VARCHAR(20), risk_score INT, avg_rainfall_mm FLOAT, flood_prone BOOLEAN)`,
     `CREATE TABLE IF NOT EXISTS workers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), phone VARCHAR(15), worker_id VARCHAR(50), platform VARCHAR(50), daily_income INT, zone_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
     `CREATE TABLE IF NOT EXISTS policies (id INT AUTO_INCREMENT PRIMARY KEY, worker_id INT, weekly_premium INT, coverage_amount INT, status VARCHAR(20) DEFAULT 'active', start_date DATE)`,
     `CREATE TABLE IF NOT EXISTS claims (id INT AUTO_INCREMENT PRIMARY KEY, worker_phone VARCHAR(15), zone VARCHAR(100), claim_type VARCHAR(50), claim_date DATE, delivery_count INT DEFAULT 0, payout_amount INT, fraud_score INT DEFAULT 0, verdict VARCHAR(20) DEFAULT 'PASS', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
-    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
-    ('Velachery','Chennai','high',85,142.5,1),('T Nagar','Chennai','medium',60,98.2,0),
-    ('Anna Nagar','Chennai','low',30,72.1,0),('Porur','Chennai','high',80,135.0,1),
-    ('Adyar','Chennai','medium',55,95.5,0),('Tambaram','Chennai','high',75,128.3,1),
-    ('Sholinganallur','Chennai','medium',50,88.7,0),('Chromepet','Chennai','low',35,74.2,0),
-    ('Perungudi','Chennai','high',78,130.1,1),('Pallikaranai','Chennai','high',88,155.2,1),
-    ('Madipakkam','Chennai','high',82,138.4,1),('Guindy','Chennai','medium',58,96.3,0),
-    ('Nungambakkam','Chennai','low',28,70.5,0),('Egmore','Chennai','low',32,73.8,0),
-    ('Mylapore','Chennai','medium',52,91.2,0),('Royapettah','Chennai','medium',48,85.6,0),
-    ('Kodambakkam','Chennai','medium',55,94.1,0),('Virugambakkam','Chennai','medium',57,97.3,0),
-    ('Saligramam','Chennai','low',38,76.4,0),('Vadapalani','Chennai','medium',53,92.7,0),
-    ('Ashok Nagar','Chennai','low',33,74.9,0),('KK Nagar','Chennai','low',36,75.8,0),
-    ('Arumbakkam','Chennai','medium',51,89.5,0),('Villivakkam','Chennai','medium',56,95.0,0),
-    ('Perambur','Chennai','medium',54,93.2,0),('Kolathur','Chennai','medium',59,97.8,0),
-    ('Madhavaram','Chennai','high',72,122.4,1),('Thiruvottiyur','Chennai','high',76,129.6,1),
-    ('Manali','Chennai','high',79,133.7,1),('Ambattur','Chennai','medium',62,102.5,0),
-    ('Avadi','Chennai','high',70,118.3,1),('Poonamallee','Chennai','high',73,124.1,1),
-    ('Vandalur','Chennai','high',71,120.7,1),('Medavakkam','Chennai','high',83,140.2,1),
-    ('Perungalathur','Chennai','high',77,131.5,1),('Urapakkam','Chennai','medium',63,104.8,0),
-    ('Guduvanchery','Chennai','medium',61,101.3,0),('Kelambakkam','Chennai','high',74,126.9,1),
-    ('Siruseri','Chennai','medium',49,87.4,0),('Navalur','Chennai','low',40,78.6,0)`,
-
-    // Mumbai zones
-`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
-('Andheri','Mumbai','high',82,185.2,1),
-('Bandra','Mumbai','medium',65,142.3,0),
-('Dharavi','Mumbai','high',88,195.5,1),
-('Kurla','Mumbai','high',80,178.4,1),
-('Dadar','Mumbai','medium',60,138.2,0),
-('Sion','Mumbai','high',78,172.1,1),
-('Worli','Mumbai','medium',55,128.6,0),
-('Lower Parel','Mumbai','medium',58,132.4,0),
-('Malad','Mumbai','high',75,165.3,1),
-('Borivali','Mumbai','medium',62,145.7,0),
-('Kandivali','Mumbai','medium',60,140.2,0),
-('Goregaon','Mumbai','medium',63,147.8,0),
-('Jogeshwari','Mumbai','high',77,168.9,1),
-('Santacruz','Mumbai','medium',57,130.5,0),
-('Vile Parle','Mumbai','medium',56,129.3,0),
-('Powai','Mumbai','high',79,174.6,1),
-('Vikhroli','Mumbai','high',76,166.8,1),
-('Ghatkopar','Mumbai','high',80,179.2,1),
-('Mulund','Mumbai','medium',64,148.5,0),
-('Thane','Mumbai','high',83,188.3,1),
-('Navi Mumbai','Mumbai','medium',61,142.9,0),
-('Panvel','Mumbai','medium',59,136.7,0),
-('Mira Road','Mumbai','medium',63,146.3,0),
-('Vasai','Mumbai','high',77,169.4,1),
-('Virar','Mumbai','medium',65,151.2,0),
-('Kalyan','Mumbai','high',81,182.7,1),
-('Dombivli','Mumbai','high',79,175.3,1),
-('Ulhasnagar','Mumbai','high',82,184.6,1),
-('Ambernath','Mumbai','medium',66,153.8,0),
-('Badlapur','Mumbai','medium',64,149.2,0),
-('Kharghar','Mumbai','medium',60,139.5,0),
-('Belapur','Mumbai','medium',58,134.8,0),
-('Airoli','Mumbai','medium',62,144.7,0),
-('Vashi','Mumbai','medium',61,142.1,0),
-('Kopar Khairane','Mumbai','medium',59,137.3,0)`,
-
-// Delhi zones
-`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
-('Connaught Place','Delhi','low',25,58.4,0),
-('Dwarka','Delhi','medium',52,95.7,0),
-('Rohini','Delhi','medium',55,98.3,0),
-('Pitampura','Delhi','medium',50,92.1,0),
-('Janakpuri','Delhi','medium',53,96.4,0),
-('Rajouri Garden','Delhi','low',35,68.2,0),
-('Karol Bagh','Delhi','low',30,62.5,0),
-('Saket','Delhi','medium',48,88.6,0),
-('Vasant Kunj','Delhi','medium',50,91.3,0),
-('Mehrauli','Delhi','medium',52,94.7,0),
-('Hauz Khas','Delhi','low',38,72.4,0),
-('Lajpat Nagar','Delhi','low',32,64.8,0),
-('Greater Kailash','Delhi','low',28,60.2,0),
-('Nehru Place','Delhi','low',30,62.9,0),
-('Okhla','Delhi','medium',55,99.1,0),
-('Shahdara','Delhi','medium',58,103.4,0),
-('Preet Vihar','Delhi','medium',54,97.6,0),
-('Mayur Vihar','Delhi','medium',56,100.2,0),
-('Patparganj','Delhi','high',65,118.7,1),
-('Noida Sector 18','Delhi','medium',52,94.3,0),
-('Noida Sector 62','Delhi','medium',50,91.8,0),
-('Greater Noida','Delhi','medium',48,88.2,0),
-('Gurgaon','Delhi','medium',53,96.8,0),
-('Faridabad','Delhi','medium',55,99.4,0),
-('Ghaziabad','Delhi','high',62,112.5,1),
-('Loni','Delhi','high',65,117.8,1),
-('Bahadurgarh','Delhi','medium',52,94.6,0),
-('Narela','Delhi','medium',50,91.2,0),
-('Bawana','Delhi','medium',53,96.1,0),
-('Najafgarh','Delhi','high',68,122.4,1),
-('Mundka','Delhi','medium',55,99.7,0),
-('Vikaspuri','Delhi','medium',52,94.9,0),
-('Uttam Nagar','Delhi','medium',54,97.3,0),
-('Bindapur','Delhi','medium',53,96.5,0),
-('Dwarka Mor','Delhi','medium',51,93.2,0)`,
-
-// Bengaluru zones
-`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
-('Koramangala','Bengaluru','high',78,142.5,1),
-('Indiranagar','Bengaluru','medium',58,108.3,0),
-('Whitefield','Bengaluru','high',75,138.7,1),
-('Electronic City','Bengaluru','medium',60,112.4,0),
-('HSR Layout','Bengaluru','high',80,145.2,1),
-('BTM Layout','Bengaluru','high',77,140.8,1),
-('Jayanagar','Bengaluru','medium',55,103.6,0),
-('JP Nagar','Bengaluru','medium',57,106.9,0),
-('Banashankari','Bengaluru','medium',56,105.2,0),
-('Rajajinagar','Bengaluru','medium',52,98.7,0),
-('Malleshwaram','Bengaluru','low',35,68.4,0),
-('Hebbal','Bengaluru','high',72,132.6,1),
-('Yelahanka','Bengaluru','medium',60,112.8,0),
-('Marathahalli','Bengaluru','high',76,139.4,1),
-('Bellandur','Bengaluru','high',82,148.6,1),
-('Sarjapur','Bengaluru','high',79,144.3,1),
-('Bommanahalli','Bengaluru','high',74,136.8,1),
-('Hongasandra','Bengaluru','medium',62,115.4,0),
-('Bannerghatta','Bengaluru','medium',58,108.7,0),
-('Anekal','Bengaluru','medium',55,103.2,0),
-('Domlur','Bengaluru','medium',57,106.5,0),
-('Shivajinagar','Bengaluru','low',32,64.8,0),
-('MG Road','Bengaluru','low',28,58.3,0),
-('Ulsoor','Bengaluru','medium',52,98.4,0),
-('Richmond Town','Bengaluru','low',30,61.7,0),
-('Kadugodi','Bengaluru','high',73,134.5,1),
-('Varthur','Bengaluru','high',78,142.8,1),
-('Hoodi','Bengaluru','high',75,138.2,1),
-('KR Puram','Bengaluru','high',70,128.6,1),
-('Banaswadi','Bengaluru','medium',63,117.3,0)`,
-
-// Hyderabad zones
-`INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES
-('Banjara Hills','Hyderabad','medium',55,98.4,0),
-('Jubilee Hills','Hyderabad','medium',52,94.7,0),
-('Gachibowli','Hyderabad','high',72,128.6,1),
-('Hitech City','Hyderabad','medium',60,108.3,0),
-('Kondapur','Hyderabad','high',75,132.4,1),
-('Madhapur','Hyderabad','medium',62,112.7,0),
-('Kukatpally','Hyderabad','high',78,138.5,1),
-('KPHB','Hyderabad','high',76,135.2,1),
-('Miyapur','Hyderabad','medium',65,116.4,0),
-('Bachupally','Hyderabad','medium',63,113.8,0),
-('Secunderabad','Hyderabad','medium',55,98.9,0),
-('Begumpet','Hyderabad','medium',52,94.3,0),
-('Ameerpet','Hyderabad','medium',50,91.6,0),
-('SR Nagar','Hyderabad','medium',53,96.2,0),
-('Erragadda','Hyderabad','medium',55,99.4,0),
-('Moosapet','Hyderabad','high',70,124.8,1),
-('Borabanda','Hyderabad','high',72,128.3,1),
-('LB Nagar','Hyderabad','high',75,132.9,1),
-('Dilsukhnagar','Hyderabad','high',78,138.7,1),
-('Kothapet','Hyderabad','high',76,135.8,1),
-('Uppal','Hyderabad','high',80,142.4,1),
-('Nacharam','Hyderabad','high',77,137.6,1),
-('Boduppal','Hyderabad','medium',65,116.9,0),
-('Peerzadiguda','Hyderabad','medium',63,113.4,0),
-('Hayathnagar','Hyderabad','medium',60,108.7,0)`
+    `CREATE TABLE IF NOT EXISTS push_subscriptions (id INT AUTO_INCREMENT PRIMARY KEY, worker_phone VARCHAR(15), subscription TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY phone_key (worker_phone))`,
+    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES ('Velachery','Chennai','high',85,142.5,1),('T Nagar','Chennai','medium',60,98.2,0),('Anna Nagar','Chennai','low',30,72.1,0),('Porur','Chennai','high',80,135.0,1),('Adyar','Chennai','medium',55,95.5,0),('Tambaram','Chennai','high',75,128.3,1),('Sholinganallur','Chennai','medium',50,88.7,0),('Chromepet','Chennai','low',35,74.2,0),('Perungudi','Chennai','high',78,130.1,1),('Pallikaranai','Chennai','high',88,155.2,1),('Madipakkam','Chennai','high',82,138.4,1),('Guindy','Chennai','medium',58,96.3,0),('Nungambakkam','Chennai','low',28,70.5,0),('Egmore','Chennai','low',32,73.8,0),('Mylapore','Chennai','medium',52,91.2,0),('Royapettah','Chennai','medium',48,85.6,0),('Kodambakkam','Chennai','medium',55,94.1,0),('Virugambakkam','Chennai','medium',57,97.3,0),('Saligramam','Chennai','low',38,76.4,0),('Vadapalani','Chennai','medium',53,92.7,0),('Ashok Nagar','Chennai','low',33,74.9,0),('KK Nagar','Chennai','low',36,75.8,0),('Arumbakkam','Chennai','medium',51,89.5,0),('Villivakkam','Chennai','medium',56,95.0,0),('Perambur','Chennai','medium',54,93.2,0),('Kolathur','Chennai','medium',59,97.8,0),('Madhavaram','Chennai','high',72,122.4,1),('Thiruvottiyur','Chennai','high',76,129.6,1),('Manali','Chennai','high',79,133.7,1),('Ambattur','Chennai','medium',62,102.5,0),('Avadi','Chennai','high',70,118.3,1),('Poonamallee','Chennai','high',73,124.1,1),('Vandalur','Chennai','high',71,120.7,1),('Medavakkam','Chennai','high',83,140.2,1),('Perungalathur','Chennai','high',77,131.5,1),('Urapakkam','Chennai','medium',63,104.8,0),('Guduvanchery','Chennai','medium',61,101.3,0),('Kelambakkam','Chennai','high',74,126.9,1),('Siruseri','Chennai','medium',49,87.4,0),('Navalur','Chennai','low',40,78.6,0)`,
+    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES ('Andheri','Mumbai','high',82,185.2,1),('Bandra','Mumbai','medium',65,142.3,0),('Dharavi','Mumbai','high',88,195.5,1),('Kurla','Mumbai','high',80,178.4,1),('Dadar','Mumbai','medium',60,138.2,0),('Sion','Mumbai','high',78,172.1,1),('Worli','Mumbai','medium',55,128.6,0),('Lower Parel','Mumbai','medium',58,132.4,0),('Malad','Mumbai','high',75,165.3,1),('Borivali','Mumbai','medium',62,145.7,0),('Kandivali','Mumbai','medium',60,140.2,0),('Goregaon','Mumbai','medium',63,147.8,0),('Jogeshwari','Mumbai','high',77,168.9,1),('Santacruz','Mumbai','medium',57,130.5,0),('Vile Parle','Mumbai','medium',56,129.3,0),('Powai','Mumbai','high',79,174.6,1),('Vikhroli','Mumbai','high',76,166.8,1),('Ghatkopar','Mumbai','high',80,179.2,1),('Mulund','Mumbai','medium',64,148.5,0),('Thane','Mumbai','high',83,188.3,1),('Navi Mumbai','Mumbai','medium',61,142.9,0),('Panvel','Mumbai','medium',59,136.7,0),('Mira Road','Mumbai','medium',63,146.3,0),('Vasai','Mumbai','high',77,169.4,1),('Virar','Mumbai','medium',65,151.2,0),('Kalyan','Mumbai','high',81,182.7,1),('Dombivli','Mumbai','high',79,175.3,1),('Ulhasnagar','Mumbai','high',82,184.6,1),('Ambernath','Mumbai','medium',66,153.8,0),('Badlapur','Mumbai','medium',64,149.2,0),('Kharghar','Mumbai','medium',60,139.5,0),('Belapur','Mumbai','medium',58,134.8,0),('Airoli','Mumbai','medium',62,144.7,0),('Vashi','Mumbai','medium',61,142.1,0),('Kopar Khairane','Mumbai','medium',59,137.3,0)`,
+    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES ('Connaught Place','Delhi','low',25,58.4,0),('Dwarka','Delhi','medium',52,95.7,0),('Rohini','Delhi','medium',55,98.3,0),('Pitampura','Delhi','medium',50,92.1,0),('Janakpuri','Delhi','medium',53,96.4,0),('Rajouri Garden','Delhi','low',35,68.2,0),('Karol Bagh','Delhi','low',30,62.5,0),('Saket','Delhi','medium',48,88.6,0),('Vasant Kunj','Delhi','medium',50,91.3,0),('Mehrauli','Delhi','medium',52,94.7,0),('Hauz Khas','Delhi','low',38,72.4,0),('Lajpat Nagar','Delhi','low',32,64.8,0),('Greater Kailash','Delhi','low',28,60.2,0),('Nehru Place','Delhi','low',30,62.9,0),('Okhla','Delhi','medium',55,99.1,0),('Shahdara','Delhi','medium',58,103.4,0),('Preet Vihar','Delhi','medium',54,97.6,0),('Mayur Vihar','Delhi','medium',56,100.2,0),('Patparganj','Delhi','high',65,118.7,1),('Noida Sector 18','Delhi','medium',52,94.3,0),('Noida Sector 62','Delhi','medium',50,91.8,0),('Greater Noida','Delhi','medium',48,88.2,0),('Gurgaon','Delhi','medium',53,96.8,0),('Faridabad','Delhi','medium',55,99.4,0),('Ghaziabad','Delhi','high',62,112.5,1),('Loni','Delhi','high',65,117.8,1),('Bahadurgarh','Delhi','medium',52,94.6,0),('Narela','Delhi','medium',50,91.2,0),('Bawana','Delhi','medium',53,96.1,0),('Najafgarh','Delhi','high',68,122.4,1),('Mundka','Delhi','medium',55,99.7,0),('Vikaspuri','Delhi','medium',52,94.9,0),('Uttam Nagar','Delhi','medium',54,97.3,0),('Bindapur','Delhi','medium',53,96.5,0),('Dwarka Mor','Delhi','medium',51,93.2,0)`,
+    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES ('Koramangala','Bengaluru','high',78,142.5,1),('Indiranagar','Bengaluru','medium',58,108.3,0),('Whitefield','Bengaluru','high',75,138.7,1),('Electronic City','Bengaluru','medium',60,112.4,0),('HSR Layout','Bengaluru','high',80,145.2,1),('BTM Layout','Bengaluru','high',77,140.8,1),('Jayanagar','Bengaluru','medium',55,103.6,0),('JP Nagar','Bengaluru','medium',57,106.9,0),('Banashankari','Bengaluru','medium',56,105.2,0),('Rajajinagar','Bengaluru','medium',52,98.7,0),('Malleshwaram','Bengaluru','low',35,68.4,0),('Hebbal','Bengaluru','high',72,132.6,1),('Yelahanka','Bengaluru','medium',60,112.8,0),('Marathahalli','Bengaluru','high',76,139.4,1),('Bellandur','Bengaluru','high',82,148.6,1),('Sarjapur','Bengaluru','high',79,144.3,1),('Bommanahalli','Bengaluru','high',74,136.8,1),('Hongasandra','Bengaluru','medium',62,115.4,0),('Bannerghatta','Bengaluru','medium',58,108.7,0),('Anekal','Bengaluru','medium',55,103.2,0),('Domlur','Bengaluru','medium',57,106.5,0),('Shivajinagar','Bengaluru','low',32,64.8,0),('MG Road','Bengaluru','low',28,58.3,0),('Ulsoor','Bengaluru','medium',52,98.4,0),('Richmond Town','Bengaluru','low',30,61.7,0),('Kadugodi','Bengaluru','high',73,134.5,1),('Varthur','Bengaluru','high',78,142.8,1),('Hoodi','Bengaluru','high',75,138.2,1),('KR Puram','Bengaluru','high',70,128.6,1),('Banaswadi','Bengaluru','medium',63,117.3,0)`,
+    `INSERT IGNORE INTO zones (name, city, risk_level, risk_score, avg_rainfall_mm, flood_prone) VALUES ('Banjara Hills','Hyderabad','medium',55,98.4,0),('Jubilee Hills','Hyderabad','medium',52,94.7,0),('Gachibowli','Hyderabad','high',72,128.6,1),('Hitech City','Hyderabad','medium',60,108.3,0),('Kondapur','Hyderabad','high',75,132.4,1),('Madhapur','Hyderabad','medium',62,112.7,0),('Kukatpally','Hyderabad','high',78,138.5,1),('KPHB','Hyderabad','high',76,135.2,1),('Miyapur','Hyderabad','medium',65,116.4,0),('Bachupally','Hyderabad','medium',63,113.8,0),('Secunderabad','Hyderabad','medium',55,98.9,0),('Begumpet','Hyderabad','medium',52,94.3,0),('Ameerpet','Hyderabad','medium',50,91.6,0),('SR Nagar','Hyderabad','medium',53,96.2,0),('Erragadda','Hyderabad','medium',55,99.4,0),('Moosapet','Hyderabad','high',70,124.8,1),('Borabanda','Hyderabad','high',72,128.3,1),('LB Nagar','Hyderabad','high',75,132.9,1),('Dilsukhnagar','Hyderabad','high',78,138.7,1),('Kothapet','Hyderabad','high',76,135.8,1),('Uppal','Hyderabad','high',80,142.4,1),('Nacharam','Hyderabad','high',77,137.6,1),('Boduppal','Hyderabad','medium',65,116.9,0),('Peerzadiguda','Hyderabad','medium',63,113.4,0),('Hayathnagar','Hyderabad','medium',60,108.7,0)`
   ];
+
+  for (const q of queries) {
+    try {
+      await db.promise().query(q);
+      results.push({ status: 'ok', query: q.substring(0, 50) });
+    } catch (err) {
+      results.push({ status: 'error', query: q.substring(0, 50), error: err.message });
+    }
+  }
+
+  const errors = results.filter(r => r.status === 'error');
+  res.json({
+    success: errors.length === 0,
+    total: results.length,
+    errors: errors.length,
+    details: results
+  });
+});
 
   let completed = 0;
   const total = queries.length;
