@@ -740,7 +740,7 @@ async function loadZones() {
 
     document.getElementById('premiumAmt').textContent = calculatedPremium;
     document.getElementById('coverageAmt').textContent = '₹' + calculatedCoverage.toLocaleString('en-IN');
-    document.getElementById('zoneDisplay').textContent = selectedZoneName + ', Chennai';
+    document.getElementById('zoneDisplay').textContent = selectedZoneName + ', ' + (document.getElementById('city').value || 'Chennai');
     document.getElementById('riskDisplay').textContent = riskData.risk_level.charAt(0).toUpperCase() + riskData.risk_level.slice(1);
 
     // Aaj ka disruption check
@@ -766,7 +766,7 @@ async function loadZones() {
     calculatedCoverage = Math.round(income * 7 * 0.7);
     document.getElementById('premiumAmt').textContent = calculatedPremium;
     document.getElementById('coverageAmt').textContent = '₹' + calculatedCoverage.toLocaleString('en-IN');
-    document.getElementById('zoneDisplay').textContent = selectedZoneName + ', Chennai';
+    document.getElementById('zoneDisplay').textContent = selectedZoneName + ', ' + (document.getElementById('city').value || 'Chennai');
     document.getElementById('riskDisplay').textContent = selectedRiskLevel.charAt(0).toUpperCase() + selectedRiskLevel.slice(1);
   }
 

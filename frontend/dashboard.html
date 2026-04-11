@@ -518,12 +518,12 @@ if (!worker) {
   // Stats
   document.getElementById('statPremium').textContent = worker.premium;
   document.getElementById('statCoverage').textContent = worker.coverage.toLocaleString('en-IN');
-  document.getElementById('statZone').textContent = worker.zone + ', Chennai';
+  document.getElementById('statZone').textContent = worker.zone + ', ' + (worker.city || 'Chennai');
 
   // Policy details
   document.getElementById('pName').textContent = worker.name;
   document.getElementById('pPlatform').textContent = worker.platform.charAt(0).toUpperCase() + worker.platform.slice(1);
-  document.getElementById('pZone').textContent = worker.zone + ', Chennai';
+  document.getElementById('pZone').textContent = worker.zone + ', ' + (worker.city || 'Chennai');
   const riskColors = { high: '#EF4444', medium: '#F59E0B', low: '#10B981' };
   document.getElementById('pRisk').textContent = worker.risk.charAt(0).toUpperCase() + worker.risk.slice(1);
   document.getElementById('pRisk').style.color = riskColors[worker.risk];
@@ -543,7 +543,7 @@ if (!worker) {
   try {
     const city = worker.city || 'Chennai';
     const weatherRes = await fetch(`${API}/api/live-weather?city=${encodeURIComponent(city)}`);
-
+    const weather = await weatherRes.json();
     // Rain tile
     document.getElementById('t1-val').textContent = `Now: ${weather.rainfall_mm}mm | Trigger: >1.5mm`;
     if (weather.triggers.rain.active) {

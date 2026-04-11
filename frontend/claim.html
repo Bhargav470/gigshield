@@ -550,7 +550,7 @@ try {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ zone: worker?.zone || 'Velachery', date: today })
     }),
-    fetch('https://gigshield-backend.onrender.com/api/live-weather')
+    fetch(`https://gigshield-backend.onrender.com/api/live-weather?city=${encodeURIComponent(worker?.city || 'Chennai')}`)
   ]);
   modelData = await mlRes.json();
   weatherData = await weatherRes.json();
@@ -679,7 +679,7 @@ return;
   document.getElementById('finalAmount').textContent = amount.toLocaleString('en-IN');
   document.getElementById('transferTime').textContent = timeStr;
   document.getElementById('dType').textContent = d.name;
-  document.getElementById('dZone').textContent = (worker?.zone || 'Velachery') + ', Chennai';
+  document.getElementById('dZone').textContent = (worker?.zone || 'Velachery') + ', ' + (worker?.city || 'Chennai');
  // Dynamic values from ML model
 const rainfall = modelData.predicted_rainfall_mm || 0;
 const dynamicCondition = selectedType === 'rain'
