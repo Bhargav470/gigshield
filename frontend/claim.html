@@ -590,11 +590,10 @@ if (selectedType === 'heat' && !weatherData.triggers?.heat?.active) {
   document.querySelector('.processing-icon').textContent = '✅';
   document.querySelector('.processing-title').textContent = 'No Heat Disruption Today';
   document.querySelector('.processing-sub').textContent =
-    `Temperature ${weatherData.temperature_c}°C in Chennai — below 42°C trigger threshold. No payout needed. Coverage remains active.`;
+    `Temperature ${weatherData.temperature_c}°C in ${worker?.city || 'Chennai'} — below 42°C trigger threshold. No payout needed. Coverage remains active.`
     document.getElementById('noTriggerCard').style.display = 'block';
 document.getElementById('noTriggerReason').textContent = 
-  `Live weather shows ${weatherData.temperature_c}°C in Chennai today. Trigger activates at 42°C. Coverage active 24/7.`;
-
+  `Live weather shows ${weatherData.temperature_c}°C in ${worker?.city || 'Chennai'} today. Trigger activates at 42°C. Coverage active 24/7.`
   return;
 }
 
@@ -609,10 +608,10 @@ if (selectedType === 'aqi' && !weatherData.triggers?.aqi?.active) {
   document.querySelector('.processing-icon').textContent = '✅';
   document.querySelector('.processing-title').textContent = 'No Pollution Disruption Today';
   document.querySelector('.processing-sub').textContent =
-    `AQI ${weatherData.aqi} in Chennai — below 300 hazardous threshold. No payout needed. Coverage remains active.`;
+    `AQI ${weatherData.aqi} in ${worker?.city || 'Chennai'} — below 300 hazardous threshold. No payout needed. Coverage remains active.`
   document.getElementById('noTriggerCard').style.display = 'block';
 document.getElementById('noTriggerReason').textContent = 
-  `Live AQI shows ${weatherData.aqi} in Chennai today. Trigger activates at AQI 300. Coverage active 24/7.`;
+  `Live AQI shows ${weatherData.aqi} in ${worker?.city || 'Chennai'} today. Trigger activates at AQI 300. Coverage active 24/7.`
 return;
 }
 
