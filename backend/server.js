@@ -248,6 +248,44 @@ if (req.body.latitude && req.body.longitude) {
   }
 }
 
+// Layer 7 — Income Fingerprint Check
+try {
+  const [history] = await db.promise().query(
+    `SELECT earnings FROM delivery_history
+     WHERE worker_phone = ? AND log_date >= DATE_SUB(?, INTERVAL 30 DAY)`,
+    [worker_phone, claim_date]
+  );
+
+  if (history.length >= 3) {
+    const earnings = history.map(h => h.earnings);
+    const avgEarnings = earnings.reduce((a, b) => a + b, 0) / earnings.length;
+    const variance = earnings.reduce((sum, val) => sum + Math.pow(val - avgEarnings, 2), 0) / earnings.length;
+    const stdDev = Math.sqrt(variance);
+
+    // Worker ki declared daily income check karo
+    const [workerData] = await db.promise().query(
+      'SELECT daily_income FROM workers WHERE phone = ?',
+      [worker_phone]
+    );
+
+    if (workerData.length > 0) {
+      const declaredIncome = workerData[0].daily_income;
+      const upperBound = avgEarnings + (2 * stdDev);
+
+      if (declaredIncome > upperBound && upperBound > 0) {
+        fraud_score += 25;
+        flags.push(`Income mismatch — declared ₹${declaredIncome}/day but fingerprint avg is ₹${Math.round(avgEarnings)}/day (max expected: ₹${Math.round(upperBound)})`);
+      } else {
+        flags.push(`Income fingerprint verified — ₹${declaredIncome}/day within expected range (avg: ₹${Math.round(avgEarnings)})`);
+      }
+    }
+  } else {
+    flags.push('Income fingerprint — insufficient history (< 3 days)');
+  }
+} catch (fpErr) {
+  flags.push('Income fingerprint check skipped — error');
+}
+
     // Final verdict
     let verdict = 'PASS';
     if (fraud_score >= 60) verdict = 'HOLD';
@@ -304,10 +342,152 @@ app.post('/api/verify-worker', (req, res) => {
   res.json({ isValid, message });
 });
 
+// POST — Log daily delivery data (Income Fingerprint)
+app.post('/api/log-delivery', async (req, res) => {
+  const { worker_phone, delivery_count, earnings, hours_worked, zone } = req.body;
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    await db.promise().query(
+      `INSERT INTO delivery_history (worker_phone, log_date, delivery_count, earnings, hours_worked, zone)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+       delivery_count = VALUES(delivery_count),
+       earnings = VALUES(earnings),
+       hours_worked = VALUES(hours_worked)`,
+      [worker_phone, today, delivery_count, earnings, hours_worked, zone]
+    );
+    res.json({ success: true, message: 'Delivery log saved' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET — Income Fingerprint Analysis
+app.get('/api/income-fingerprint/:phone', async (req, res) => {
+  const phone = req.params.phone;
+
+  try {
+    // Last 30 days ki delivery history fetch karo
+    const [history] = await db.promise().query(
+      `SELECT delivery_count, earnings, hours_worked, log_date
+       FROM delivery_history
+       WHERE worker_phone = ? AND log_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+       ORDER BY log_date DESC`,
+      [phone]
+    );
+
+    if (history.length < 3) {
+      return res.json({
+        has_fingerprint: false,
+        message: 'Not enough delivery history (minimum 3 days needed)',
+        days_logged: history.length
+      });
+    }
+
+    // Average aur standard deviation calculate karo
+    const earnings = history.map(h => h.earnings);
+    const deliveries = history.map(h => h.delivery_count);
+
+    const avgEarnings = Math.round(earnings.reduce((a, b) => a + b, 0) / earnings.length);
+    const avgDeliveries = Math.round(deliveries.reduce((a, b) => a + b, 0) / deliveries.length);
+
+    // Standard deviation
+    const variance = earnings.reduce((sum, val) => sum + Math.pow(val - avgEarnings, 2), 0) / earnings.length;
+    const stdDev = Math.round(Math.sqrt(variance));
+
+    // Upper bound = avg + 2*stdDev (95% confidence)
+    const upperBound = avgEarnings + (2 * stdDev);
+    const lowerBound = Math.max(0, avgEarnings - (2 * stdDev));
+
+    // Max aur min bhi nikalo
+    const maxEarnings = Math.max(...earnings);
+    const minEarnings = Math.min(...earnings);
+
+    res.json({
+      has_fingerprint: true,
+      days_logged: history.length,
+      avg_daily_earnings: avgEarnings,
+      avg_daily_deliveries: avgDeliveries,
+      std_deviation: stdDev,
+      earnings_range: {
+        lower_bound: lowerBound,
+        upper_bound: upperBound,
+        historical_max: maxEarnings,
+        historical_min: minEarnings
+      },
+      recent_history: history.slice(0, 7) // Last 7 days dikhao
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Seed mock delivery history for testing
+app.get('/api/seed-delivery-history/:phone', async (req, res) => {
+  const phone = req.params.phone;
+
+  try {
+    // Get worker's zone and income
+    const [workers] = await db.promise().query(
+      'SELECT daily_income, z.name as zone FROM workers w JOIN zones z ON w.zone_id = z.id WHERE w.phone = ?',
+      [phone]
+    );
+
+    if (workers.length === 0) return res.status(404).json({ error: 'Worker not found' });
+
+    const baseIncome = workers[0].daily_income;
+    const zone = workers[0].zone;
+    const values = [];
+
+    // Last 30 days ka data generate karo
+    for (let i = 1; i <= 30; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      // Random variation ±20%
+      const variation = 0.8 + (Math.random() * 0.4);
+      const earnings = Math.round(baseIncome * variation);
+      const deliveries = Math.round(earnings / 25); // ~Rs.25 per delivery
+      const hours = Math.round((6 + Math.random() * 4) * 10) / 10; // 6-10 hours
+
+      values.push([phone, dateStr, deliveries, earnings, hours, zone]);
+    }
+
+    for (const v of values) {
+      await db.promise().query(
+        `INSERT IGNORE INTO delivery_history (worker_phone, log_date, delivery_count, earnings, hours_worked, zone)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        v
+      );
+    }
+
+    res.json({ success: true, message: `Seeded 30 days history for ${phone}`, base_income: baseIncome });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 app.get('/api/setup', async (req, res) => {
   const results = [];
   
   const queries = [
+    `CREATE TABLE IF NOT EXISTS delivery_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  worker_phone VARCHAR(15),
+  log_date DATE,
+  delivery_count INT DEFAULT 0,
+  earnings INT DEFAULT 0,
+  hours_worked FLOAT DEFAULT 0,
+  zone VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY phone_date (worker_phone, log_date)
+)`,
+
     `CREATE TABLE IF NOT EXISTS zone_activity (id INT AUTO_INCREMENT PRIMARY KEY, zone VARCHAR(100), activity_date DATE, active_workers INT DEFAULT 0, claiming_workers INT DEFAULT 0, solidarity_score FLOAT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY zone_date (zone, activity_date))`,
     `CREATE TABLE IF NOT EXISTS zones (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), city VARCHAR(100), risk_level VARCHAR(20), risk_score INT, avg_rainfall_mm FLOAT, flood_prone BOOLEAN)`,
     `CREATE TABLE IF NOT EXISTS workers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), phone VARCHAR(15), worker_id VARCHAR(50), platform VARCHAR(50), daily_income INT, zone_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,

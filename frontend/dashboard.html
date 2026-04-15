@@ -448,6 +448,18 @@ nav {
       </button>
     </div>
 
+<!-- INCOME FINGERPRINT -->
+<h2 class="section-title">📊 Income Fingerprint</h2>
+<div class="policy-card" id="fingerprintCard">
+  <div class="policy-header">
+    <div class="policy-title">30-Day Earning Pattern</div>
+    <div class="status-badge" id="fpStatus">Loading...</div>
+  </div>
+  <div id="fingerprintData">
+    <div class="history-empty">Analyzing your earning pattern...</div>
+  </div>
+</div>
+
     <!-- PAYOUT HISTORY -->
     <h2 class="section-title" data-i18n="payout_history">Payout History</h2>
     <div class="history-card">
@@ -614,6 +626,52 @@ if (!worker) {
   checkLiveDisruptions();
 
   setupPushNotifications();
+
+  // Income Fingerprint load karo
+async function loadFingerprint() {
+  try {
+    const res = await fetch(`${API}/api/income-fingerprint/${worker.phone}`);
+    const data = await res.json();
+
+    if (!data.has_fingerprint) {
+      document.getElementById('fpStatus').textContent = 'Building...';
+      document.getElementById('fingerprintData').innerHTML =
+        `<div class="history-empty">${data.message}<br>Keep delivering to build your income signature!</div>`;
+      return;
+    }
+
+    document.getElementById('fpStatus').textContent = `${data.days_logged} days tracked`;
+    document.getElementById('fpStatus').style.background = 'rgba(16,185,129,0.12)';
+
+    document.getElementById('fingerprintData').innerHTML = `
+      <div class="policy-row">
+        <span class="key">Average Daily Earnings</span>
+        <span class="val amber">₹${data.avg_daily_earnings}</span>
+      </div>
+      <div class="policy-row">
+        <span class="key">Average Daily Deliveries</span>
+        <span class="val">${data.avg_daily_deliveries}</span>
+      </div>
+      <div class="policy-row">
+        <span class="key">Expected Range</span>
+        <span class="val green">₹${data.earnings_range.lower_bound} — ₹${data.earnings_range.upper_bound}</span>
+      </div>
+      <div class="policy-row">
+        <span class="key">Historical Max</span>
+        <span class="val">₹${data.earnings_range.historical_max}</span>
+      </div>
+      <div class="policy-row">
+        <span class="key">Days Tracked</span>
+        <span class="val">${data.days_logged} days</span>
+      </div>
+    `;
+  } catch (err) {
+    console.log('Fingerprint load failed');
+  }
+}
+
+loadFingerprint();
+
 
   // Payout history
   const payouts = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');

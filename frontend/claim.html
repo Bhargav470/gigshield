@@ -433,6 +433,11 @@ nav {
           <div class="detail-row"><span class="k">Trigger Condition</span><span class="v" id="dCondition">--</span></div>
          <div class="detail-row"><span class="k">Fraud Check</span><span class="v" style="color:var(--green)" id="dFraudScore">Passed ✓</span></div>
           <div class="detail-row"><span class="k">Processing Time</span><span class="v" style="color:var(--green)" id="dTime">--</span></div>
+          <div class="detail-row">
+  <span class="k">Income Fingerprint</span>
+  <span class="v" style="color:var(--green)" id="dFingerprint">Checking...</span>
+</div>
+
         </div>
 
         <button class="btn-dashboard" onclick="goToDashboard()">Back to Dashboard →</button>
@@ -706,6 +711,18 @@ document.getElementById('aiReason').textContent = dynamicReason;
   // Fraud score bhi dikhao
   document.getElementById('dFraudScore').textContent =
     `Passed ✓ (Score: ${fraudResult.fraud_score}/100)`;
+
+    // Income fingerprint result dikhao
+const fpFlag = fraudResult.flags?.find(f => f.includes('Income'));
+if (fpFlag) {
+  document.getElementById('dFingerprint').textContent =
+    fpFlag.includes('mismatch') ? `⚠️ ${fpFlag}` : `✓ ${fpFlag}`;
+  document.getElementById('dFingerprint').style.color =
+    fpFlag.includes('mismatch') ? 'var(--amber)' : 'var(--green)';
+} else {
+  document.getElementById('dFingerprint').textContent = 'No history yet';
+}
+
 
   // Save payout history
   const payoutHistory = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');
