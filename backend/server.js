@@ -1,3 +1,4 @@
+// GigShield Backend v3.1 — Income Fingerprint + Phase 3
 require('dotenv').config();
 const cron = require('node-cron');
 const axios = require('axios');
