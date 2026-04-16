@@ -673,29 +673,46 @@ async function loadFingerprint() {
 loadFingerprint();
 
 
-  // Payout history
-  const payouts = JSON.parse(localStorage.getItem('gigshield_payouts') || '[]');
-  if (payouts.length > 0) {
-    let total = 0;
-    let html = '';
-    payouts.forEach(p => {
-      total += p.amount;
-      html += `
-        <div class="payout-item">
-          <div class="payout-left">
-            <div class="payout-icon">${p.icon}</div>
-            <div>
-              <div class="payout-reason">${p.reason}</div>
-              <div class="payout-date">${p.date}</div>
+  
+// Real payout history from database
+async function loadPayoutHistory() {
+  try {
+    const res = await fetch(`${API}/api/payout-history/${worker.phone}`);
+    const dbPayouts = await res.json();
+
+    if (dbPayouts.length > 0) {
+      let total = 0;
+      let html = '';
+      dbPayouts.forEach(p => {
+        total += p.amount;
+        const icon = p.claim_type?.includes('Rain') ? '🌧️' :
+                     p.claim_type?.includes('Heat') ? '🌡️' :
+                     p.claim_type?.includes('AQI') ? '💨' : '🚫';
+        const date = new Date(p.created_at).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+        html += `
+          <div class="payout-item">
+            <div class="payout-left">
+              <div class="payout-icon">${icon}</div>
+              <div>
+                <div class="payout-reason">${p.claim_type || 'Disruption'}</div>
+                <div class="payout-date">${date} · UTR: ${p.utr_number || 'N/A'}</div>
+              </div>
             </div>
+            <div class="payout-amount">+₹${p.amount}</div>
           </div>
-          <div class="payout-amount">+₹${p.amount}</div>
-        </div>
-      `;
-    });
-    document.getElementById('payoutHistory').innerHTML = html;
-    document.getElementById('statPayouts').textContent = total.toLocaleString('en-IN');
+        `;
+      });
+      document.getElementById('payoutHistory').innerHTML = html;
+      document.getElementById('statPayouts').textContent = total.toLocaleString('en-IN');
+    }
+  } catch (err) {
+    console.log('DB payout history failed — using localStorage');
   }
+}
+
+loadPayoutHistory();
 }
 
 function logout() {

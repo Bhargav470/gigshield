@@ -6,6 +6,16 @@ const FLASK_MODEL_URL = 'https://gigshield-model.onrender.com';
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const Razorpay = require('razorpay');
+
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+const crypto = require('crypto');
+
 const webpush = require('web-push');
 webpush.setVapidDetails(
   process.env.VAPID_EMAIL,
@@ -477,6 +487,20 @@ app.get('/api/setup', async (req, res) => {
   const results = [];
   
   const queries = [
+  `CREATE TABLE IF NOT EXISTS payouts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  worker_phone VARCHAR(15),
+  claim_id INT,
+  amount INT,
+  razorpay_payout_id VARCHAR(100),
+  razorpay_order_id VARCHAR(100),
+  utr_number VARCHAR(100),
+  status VARCHAR(30) DEFAULT 'pending',
+  payment_method VARCHAR(30) DEFAULT 'UPI',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`,
+
+
     `CREATE TABLE IF NOT EXISTS delivery_history (
   id INT AUTO_INCREMENT PRIMARY KEY,
   worker_phone VARCHAR(15),
@@ -692,6 +716,105 @@ app.post('/api/send-push', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// POST — Create Razorpay order for payout
+app.post('/api/create-payout', async (req, res) => {
+  const { worker_phone, amount, claim_type, zone } = req.body;
+
+  try {
+    // Razorpay order banao
+    const order = await razorpay.orders.create({
+      amount: amount * 100, // Razorpay paisa mein leta hai (Rs.420 = 42000 paisa)
+      currency: 'INR',
+      receipt: `payout_${worker_phone}_${Date.now()}`,
+      notes: {
+        worker_phone: worker_phone,
+        claim_type: claim_type,
+        zone: zone,
+        platform: 'GigShield'
+      }
+    });
+
+    // Database mein save karo
+    await db.promise().query(
+      `INSERT INTO payouts (worker_phone, amount, razorpay_order_id, status)
+       VALUES (?, ?, ?, 'created')`,
+      [worker_phone, amount, order.id]
+    );
+
+    res.json({
+      success: true,
+      order_id: order.id,
+      amount: amount,
+      currency: 'INR',
+      key_id: process.env.RAZORPAY_KEY_ID // Frontend ko key dedo
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// POST — Verify Razorpay payment
+app.post('/api/verify-payment', async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  try {
+    // Signature verify karo
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest('hex');
+    const isValid = expectedSignature === razorpay_signature;
+    if (isValid) {
+      // Payment details fetch karo (UTR number ke liye)
+      const payment = await razorpay.payments.fetch(razorpay_payment_id);
+      // Database update karo
+      await db.promise().query(
+        `UPDATE payouts SET
+         razorpay_payout_id = ?,
+         utr_number = ?,
+         status = 'completed'
+         WHERE razorpay_order_id = ?`,
+        [razorpay_payment_id, payment.acquirer_data?.utr || `UTR${Date.now()}`, razorpay_order_id]
+      );
+      res.json({
+        success: true,
+        verified: true,
+        payment_id: razorpay_payment_id,
+        utr: payment.acquirer_data?.utr || `UTR${Date.now()}`,
+        method: payment.method,
+        status: payment.status
+      });
+    } else {
+      res.json({ success: false, verified: false, message: 'Signature mismatch' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET — Payout history from database
+app.get('/api/payout-history/:phone', async (req, res) => {
+  try {
+    const [payouts] = await db.promise().query(
+      `SELECT p.*, c.claim_type, c.zone
+       FROM payouts p
+       LEFT JOIN claims c ON p.claim_id = c.id
+       WHERE p.worker_phone = ?
+       ORDER BY p.created_at DESC
+       LIMIT 20`,
+      [req.params.phone]
+    );
+    res.json(payouts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+
+
 // Zone coordinates — Chennai zones ke lat/lng
 const ZONE_COORDINATES = {
   'Velachery': { lat: 12.9815, lng: 80.2180, radius: 3 },

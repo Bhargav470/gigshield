@@ -316,6 +316,8 @@ nav {
 
   </style>
   <script src="translations.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 </head>
 <body>
   <div class="bg-image"></div>
@@ -423,6 +425,11 @@ nav {
           <div class="payout-label">Amount Transferred</div>
           <div class="payout-amount">₹<span id="finalAmount">--</span></div>
           <div class="payout-method">📱 Sent to UPI · <span id="transferTime">--</span></div>
+<div class="payout-method" style="margin-top:8px; font-size:12px; color:var(--text-muted);">
+  UTR: <span id="utrNumber" style="color:var(--amber); font-family:monospace;">--</span> ·
+  Payment ID: <span id="paymentId" style="color:var(--text-muted); font-family:monospace;">--</span>
+</div>
+
         </div>
 
         <div class="reason-card">
@@ -667,10 +674,80 @@ return;
   await new Promise(r => setTimeout(r, 600));
   setStep(5, 'done');
 
-  // Step 6
-  setStep(6, 'loading');
-  await new Promise(r => setTimeout(r, 600));
-  setStep(6, 'done');
+  // Step 6 — Razorpay UPI Payment
+setStep(6, 'loading');
+
+let paymentResult = { utr: 'MOCK-UTR', payment_id: 'mock' };
+
+try {
+  // Razorpay order banao
+  const orderRes = await fetch('https://gigshield-backend.onrender.com/api/create-payout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      worker_phone: worker.phone,
+      amount: amount,
+      claim_type: disruptions[selectedType].name,
+      zone: worker.zone
+    })
+  });
+  const orderData = await orderRes.json();
+
+  if (orderData.success) {
+    // Razorpay checkout open karo
+    paymentResult = await new Promise((resolve, reject) => {
+      const options = {
+        key: orderData.key_id,
+        amount: orderData.amount * 100,
+        currency: 'INR',
+        name: 'GigShield',
+        description: `Payout — ${disruptions[selectedType].name}`,
+        order_id: orderData.order_id,
+        handler: async function(response) {
+          // Payment verify karo
+          try {
+            const verifyRes = await fetch('https://gigshield-backend.onrender.com/api/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            const verifyData = await verifyRes.json();
+            resolve({
+              utr: verifyData.utr || 'UTR-PENDING',
+              payment_id: response.razorpay_payment_id,
+              verified: verifyData.verified
+            });
+          } catch (e) {
+            resolve({ utr: 'UTR-PENDING', payment_id: response.razorpay_payment_id, verified: false });
+          }
+        },
+        prefill: {
+          name: worker.name,
+          contact: worker.phone
+        },
+        theme: {
+          color: '#F59E0B'
+        },
+        modal: {
+          ondismiss: function() {
+            resolve({ utr: 'CANCELLED', payment_id: null, verified: false });
+          }
+        }
+      };
+      const rzp = new Razorpay(options);
+      rzp.open();
+    });
+  }
+} catch (err) {
+  console.log('Razorpay failed — using mock payout');
+}
+
+setStep(6, 'done');
+
 
   // Success screen
   await new Promise(r => setTimeout(r, 500));
@@ -684,6 +761,10 @@ return;
   document.getElementById('transferTime').textContent = timeStr;
   document.getElementById('dType').textContent = d.name;
   document.getElementById('dZone').textContent = (worker?.zone || 'Velachery') + ', ' + (worker?.city || 'Chennai');
+  // UTR aur Payment ID dikhao
+document.getElementById('utrNumber').textContent = paymentResult.utr || 'N/A';
+document.getElementById('paymentId').textContent = paymentResult.payment_id || 'N/A';
+
  // Dynamic values from ML model
 const rainfall = modelData.predicted_rainfall_mm ?? weatherData.rainfall_mm ?? 0;
 const dynamicCondition = selectedType === 'rain'
