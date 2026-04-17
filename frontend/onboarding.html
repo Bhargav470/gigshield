@@ -462,7 +462,8 @@ select option { background: #111; }
   text-decoration: underline;
 }
 </style>
-
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
   <div class="bg-image"></div>
@@ -569,7 +570,8 @@ select option { background: #111; }
           <input type="number" id="income" placeholder="600" min="200" max="2000"/>
         </div>
         <div class="error-msg" id="err1">Please fill all fields!</div>
-        <button class="btn-primary" onclick="goToStep2()">Continue →</button>
+        <div id="recaptcha-container" style="margin-top: 10px;"></div>
+        <button class="btn-primary" id="step1Btn" onclick="goToStep2()">Continue →</button>
       </div>
      
 
@@ -659,6 +661,19 @@ function selectLanguage(lang) {
 }
 
    const API = 'https://gigshield-backend.onrender.com';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBPOKv8HuVFE9FTA4f7HKlMhcRsMFmecHo",
+      authDomain: "gigshield-6baa7.firebaseapp.com",
+      projectId: "gigshield-6baa7",
+      storageBucket: "gigshield-6baa7.firebasestorage.app",
+      messagingSenderId: "751649289370",
+      appId: "1:751649289370:web:57ef896793dfe73f589b23",
+      measurementId: "G-GE8VL24QY5"
+    };
+    firebase.initializeApp(firebaseConfig);
+    let recaptchaVerifier = null;
+
     let selectedPlatform = 'zepto';
     let selectedZoneId = null;
     let selectedZoneName = '';
@@ -755,42 +770,50 @@ async function loadZones() {
     // Backend down — allow proceed
   }
 
-  // OTP bhejo
-const otpBtn = document.querySelector('#panel1 .btn-primary');
-otpBtn.textContent = 'Sending OTP...';
+  btn.textContent = 'Sending OTP...';
 
-try {
-  const otpRes = await fetch(`${API}/api/send-otp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: phone })
-  });
-  const otpData = await otpRes.json();
-  
-  if (otpData.success) {
-    // OTP screen dikhao
+  if (!recaptchaVerifier) {
+    try {
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+        'size': 'invisible'
+      });
+      await recaptchaVerifier.render();
+    } catch(e) {
+      console.error(e);
+      document.getElementById('err1').style.display = 'block';
+      document.getElementById('err1').textContent = 'reCAPTCHA failed';
+      btn.disabled = false;
+      btn.textContent = 'Continue →';
+      return;
+    }
+  }
+
+  const phoneNumberFormat = phone.startsWith('+91') ? phone : '+91' + phone;
+
+  try {
+    const confirmationResult = await firebase.auth().signInWithPhoneNumber(phoneNumberFormat, recaptchaVerifier);
+    window.confirmationResult = confirmationResult;
+    
     document.querySelector('.stepper').style.display = 'none';
     document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'none';
     document.getElementById('otpScreen').style.display = 'block';
-    document.getElementById('otpDesc').textContent = `Enter the 6-digit OTP sent to +91 ${phone}`;
-    otpBtn.disabled = false;
-    otpBtn.textContent = 'Continue →';
-    return; // goToStep2 rok do — OTP verify hone ke baad aage jaayega
+    document.getElementById('otpDesc').textContent = `Enter the 6-digit OTP sent to ${phoneNumberFormat}`;
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+    return;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('err1').style.display = 'block';
+    document.getElementById('err1').textContent = e.message || 'Failed to send OTP.';
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+    
+    if(recaptchaVerifier) {
+       recaptchaVerifier.clear();
+       recaptchaVerifier = null;
+    }
+    return;
   }
-} catch(e) {
-  // OTP fail — proceed anyway
-}
-
-otpBtn.disabled = false;
-otpBtn.textContent = 'Continue →';
-loadZones();
-goToStep(2);
-
-  btn.disabled = false;
-  btn.textContent = 'Continue →';
-  document.getElementById('err1').style.display = 'none';
-  loadZones();
-  goToStep(2);
 }
 
 async function verifyOTP() {
@@ -807,50 +830,52 @@ async function verifyOTP() {
   btn.disabled = true;
   btn.textContent = 'Verifying...';
 
-  try {
-    const res = await fetch(`${API}/api/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, otp })
-    });
-    const data = await res.json();
+  if (!window.confirmationResult) {
+     document.getElementById('otpErr').style.display = 'block';
+     document.getElementById('otpErr').textContent = 'Session error. Please request OTP again.';
+     btn.disabled = false;
+     btn.textContent = 'Verify & Continue →';
+     return;
+  }
 
-    if (data.verified) {
-      // OTP verified — proceed
-      document.getElementById('otpScreen').style.display = 'none';
-      document.querySelector('.stepper').style.display = 'flex';
-      document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'block';
-      document.getElementById('otpErr').style.display = 'none';
-      loadZones();
-      goToStep(2);
-    } else {
-      document.getElementById('otpErr').style.display = 'block';
-      document.getElementById('otpErr').textContent = data.error || 'Invalid OTP';
-      btn.disabled = false;
-      btn.textContent = 'Verify & Continue →';
-    }
-  } catch(e) {
-    // Backend down — allow proceed
+  try {
+    await window.confirmationResult.confirm(otp);
+    
     document.getElementById('otpScreen').style.display = 'none';
     document.querySelector('.stepper').style.display = 'flex';
     document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'block';
+    document.getElementById('otpErr').style.display = 'none';
+    document.getElementById('err1').style.display = 'none';
     loadZones();
     goToStep(2);
+  } catch(e) {
+    document.getElementById('otpErr').style.display = 'block';
+    document.getElementById('otpErr').textContent = 'Invalid OTP. Try again!';
+    btn.disabled = false;
+    btn.textContent = 'Verify & Continue →';
   }
 }
 
 async function resendOTP() {
   const phone = document.getElementById('phone').value.trim();
+  const phoneNumberFormat = phone.startsWith('+91') ? phone : '+91' + phone;
+
   try {
-    await fetch(`${API}/api/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone })
-    });
+    if(!recaptchaVerifier) {
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
+      await recaptchaVerifier.render();
+    }
+    const confirmationResult = await firebase.auth().signInWithPhoneNumber(phoneNumberFormat, recaptchaVerifier);
+    window.confirmationResult = confirmationResult;
+    
     document.getElementById('otpErr').style.display = 'block';
     document.getElementById('otpErr').style.color = 'var(--green)';
     document.getElementById('otpErr').textContent = 'OTP resent successfully!';
-  } catch(e) {}
+  } catch(e) {
+    document.getElementById('otpErr').style.display = 'block';
+    document.getElementById('otpErr').style.color = 'var(--red)';
+    document.getElementById('otpErr').textContent = 'Failed to resend OTP.';
+  }
 }
 
 
