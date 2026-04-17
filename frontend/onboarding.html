@@ -430,6 +430,37 @@ select option { background: #111; }
 .lang-flag { font-size: 36px; margin-bottom: 10px; }
 .lang-name { font-size: 18px; font-weight: 600; }
 .lang-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.otp-input {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 12px;
+  outline: none;
+  transition: all 0.2s;
+}
+.otp-input:focus {
+  border-color: var(--amber);
+  background: rgba(245,158,11,0.06);
+  box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+}
+.resend-btn {
+  background: none;
+  border: none;
+  color: var(--amber);
+  font-size: 13px;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  margin-top: 12px;
+  text-decoration: underline;
+}
 </style>
 
 </head>
@@ -464,6 +495,21 @@ select option { background: #111; }
         <div class="lang-sub">Tamil</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- OTP VERIFICATION SCREEN -->
+<div class="form-container" id="otpScreen" style="display:none;">
+  <div class="form-card">
+    <h2>Verify Your Number 📱</h2>
+    <p class="desc" id="otpDesc">Enter the 6-digit OTP sent to your phone.</p>
+    <div class="field">
+      <label>ENTER OTP</label>
+      <input type="number" class="otp-input" id="otpInput" placeholder="------" maxlength="6"/>
+    </div>
+    <div class="error-msg" id="otpErr">Invalid OTP. Try again!</div>
+    <button class="btn-primary" onclick="verifyOTP()">Verify & Continue →</button>
+    <button class="resend-btn" onclick="resendOTP()">Resend OTP</button>
   </div>
 </div>
 
@@ -709,11 +755,102 @@ async function loadZones() {
     // Backend down — allow proceed
   }
 
+  // OTP bhejo
+const otpBtn = document.querySelector('#panel1 .btn-primary');
+otpBtn.textContent = 'Sending OTP...';
+
+try {
+  const otpRes = await fetch(`${API}/api/send-otp`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: phone })
+  });
+  const otpData = await otpRes.json();
+  
+  if (otpData.success) {
+    // OTP screen dikhao
+    document.querySelector('.stepper').style.display = 'none';
+    document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'none';
+    document.getElementById('otpScreen').style.display = 'block';
+    document.getElementById('otpDesc').textContent = `Enter the 6-digit OTP sent to +91 ${phone}`;
+    otpBtn.disabled = false;
+    otpBtn.textContent = 'Continue →';
+    return; // goToStep2 rok do — OTP verify hone ke baad aage jaayega
+  }
+} catch(e) {
+  // OTP fail — proceed anyway
+}
+
+otpBtn.disabled = false;
+otpBtn.textContent = 'Continue →';
+loadZones();
+goToStep(2);
+
   btn.disabled = false;
   btn.textContent = 'Continue →';
   document.getElementById('err1').style.display = 'none';
   loadZones();
   goToStep(2);
+}
+
+async function verifyOTP() {
+  const phone = document.getElementById('phone').value.trim();
+  const otp = document.getElementById('otpInput').value.trim();
+
+  if (otp.length !== 6) {
+    document.getElementById('otpErr').style.display = 'block';
+    document.getElementById('otpErr').textContent = 'Please enter 6-digit OTP';
+    return;
+  }
+
+  const btn = document.querySelector('#otpScreen .btn-primary');
+  btn.disabled = true;
+  btn.textContent = 'Verifying...';
+
+  try {
+    const res = await fetch(`${API}/api/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp })
+    });
+    const data = await res.json();
+
+    if (data.verified) {
+      // OTP verified — proceed
+      document.getElementById('otpScreen').style.display = 'none';
+      document.querySelector('.stepper').style.display = 'flex';
+      document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'block';
+      document.getElementById('otpErr').style.display = 'none';
+      loadZones();
+      goToStep(2);
+    } else {
+      document.getElementById('otpErr').style.display = 'block';
+      document.getElementById('otpErr').textContent = data.error || 'Invalid OTP';
+      btn.disabled = false;
+      btn.textContent = 'Verify & Continue →';
+    }
+  } catch(e) {
+    // Backend down — allow proceed
+    document.getElementById('otpScreen').style.display = 'none';
+    document.querySelector('.stepper').style.display = 'flex';
+    document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'block';
+    loadZones();
+    goToStep(2);
+  }
+}
+
+async function resendOTP() {
+  const phone = document.getElementById('phone').value.trim();
+  try {
+    await fetch(`${API}/api/send-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    document.getElementById('otpErr').style.display = 'block';
+    document.getElementById('otpErr').style.color = 'var(--green)';
+    document.getElementById('otpErr').textContent = 'OTP resent successfully!';
+  } catch(e) {}
 }
 
 

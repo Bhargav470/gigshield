@@ -411,7 +411,7 @@ nav {
     </div>
 
     <!-- DISRUPTION TRIGGERS -->
-    <h2 class="section-title" data-i18n="live_monitors">Live Disruption Monitors</h2>
+    <h2 class="section-title" id="liveMonitorTitle" data-i18n="live_monitors">Live Disruption Monitors</h2>
     <div class="triggers-grid">
       <div class="trigger-card">
         <div class="trigger-icon">🌧️</div>
@@ -434,7 +434,7 @@ nav {
       <div class="trigger-card">
         <div class="trigger-icon">🚫</div>
         <div class="trigger-name">Zone Closure</div>
-        <div class="trigger-threshold">Curfew / Strike</div>
+        <div class="trigger-threshold" id="t4-val">Curfew / Strike</div>
         <div class="trigger-status status-safe" id="t4">Safe</div>
       </div>
     </div>
@@ -531,6 +531,8 @@ if (!worker) {
   document.getElementById('statPremium').textContent = worker.premium;
   document.getElementById('statCoverage').textContent = worker.coverage.toLocaleString('en-IN');
   document.getElementById('statZone').textContent = worker.zone + ', ' + (worker.city || 'Chennai');
+  document.getElementById('liveMonitorTitle').innerHTML = `Live Disruption Monitors <span style="color:var(--text-muted); font-size:14px; margin-left:8px; font-weight:400;">(${worker.zone})</span>`;
+  document.getElementById('t4-val').textContent = `Zone: ${worker.zone}`;
 
   // Policy details
   document.getElementById('pName').textContent = worker.name;
@@ -554,7 +556,8 @@ if (!worker) {
   // Live weather API call
   try {
     const city = worker.city || 'Chennai';
-    const weatherRes = await fetch(`${API}/api/live-weather?city=${encodeURIComponent(city)}`);
+    const zone = worker.zone || '';
+    const weatherRes = await fetch(`${API}/api/live-weather?city=${encodeURIComponent(city)}&zone=${encodeURIComponent(zone)}`);
     const weather = await weatherRes.json();
     // Rain tile
     document.getElementById('t1-val').textContent = `Now: ${weather.rainfall_mm}mm | Trigger: >1.5mm`;
