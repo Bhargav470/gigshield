@@ -757,7 +757,9 @@ async function loadZones() {
 
     const publicKey = {
       challenge: challenge,
-      rp: { name: "GigShield Platform" },
+      rp: { name: "GigShield Platform",
+            id: window.location.hostname
+       },
       user: {
         id: userId,
         name: phone,
@@ -765,7 +767,8 @@ async function loadZones() {
       },
       pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
       authenticatorSelection: {
-        userVerification: "required"
+         authenticatorAttachment: 'platform',
+        userVerification: "preferred"
       },
       timeout: 60000
     };
