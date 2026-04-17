@@ -1027,55 +1027,7 @@ app.get('/api/run-trigger-engine', async (req, res) => {
   }
 });
 
-// OTP Store — temporary in memory
-const otpStore = {};
 
-// Send OTP
-app.post('/api/send-otp', async (req, res) => {
-  const { phone } = req.body;
-  if (!phone || phone.length !== 10) {
-    return res.status(400).json({ error: 'Invalid phone number' });
-  }
-
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  otpStore[phone] = { otp, expires: Date.now() + 5 * 60 * 1000 };
-
-  try {
-    await axios.get(`https://www.fast2sms.com/dev/bulkV2`, {
-      params: {
-        authorization: process.env.FAST2SMS_KEY,
-        variables_values: otp,
-        route: 'otp',
-        numbers: phone
-      }
-    });
-    res.json({ success: true, message: 'OTP sent successfully' });
-  } catch (err) {
-    // Fallback — log OTP for testing
-    console.log(`OTP for ${phone}: ${otp}`);
-    res.json({ success: true, message: 'OTP sent (check server logs for testing)' });
-  }
-});
-
-// Verify OTP
-app.post('/api/verify-otp', (req, res) => {
-  const { phone, otp } = req.body;
-  const record = otpStore[phone];
-
-  if (!record) {
-    return res.status(400).json({ verified: false, error: 'OTP not found — resend karo' });
-  }
-  if (Date.now() > record.expires) {
-    delete otpStore[phone];
-    return res.status(400).json({ verified: false, error: 'OTP expired — resend karo' });
-  }
-  if (record.otp !== otp) {
-    return res.status(400).json({ verified: false, error: 'Invalid OTP' });
-  }
-
-  delete otpStore[phone];
-  res.json({ verified: true, message: 'Phone verified successfully' });
-});
 
 app.listen(process.env.PORT, () => {
   console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
