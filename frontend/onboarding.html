@@ -803,6 +803,26 @@ async function loadZones() {
     return;
   } catch(e) {
     console.error(e);
+    
+    // DEMO FALLBACK: If Firebase billing is not enabled, let the user proceed locally
+    if (e.code === 'auth/billing-not-enabled') {
+      window.isMockOTP = true;
+      window.mockOTPValue = '123456';
+      
+      document.querySelector('.stepper').style.display = 'none';
+      document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'none';
+      document.getElementById('otpScreen').style.display = 'block';
+      document.getElementById('otpDesc').innerHTML = `⚠️ <b>[DEMO MODE]</b> Firebase requires a credit card. <br>Use Test OTP: <b>123456</b>`;
+      btn.disabled = false;
+      btn.textContent = 'Continue →';
+      
+      if(recaptchaVerifier) {
+         recaptchaVerifier.clear();
+         recaptchaVerifier = null;
+      }
+      return;
+    }
+
     document.getElementById('err1').style.display = 'block';
     document.getElementById('err1').textContent = e.message || 'Failed to send OTP.';
     btn.disabled = false;
@@ -829,6 +849,24 @@ async function verifyOTP() {
   const btn = document.querySelector('#otpScreen .btn-primary');
   btn.disabled = true;
   btn.textContent = 'Verifying...';
+
+   if (window.isMockOTP) {
+    if (otp === window.mockOTPValue) {
+        document.getElementById('otpScreen').style.display = 'none';
+        document.querySelector('.stepper').style.display = 'flex';
+        document.querySelector('.form-container:not(#langScreen):not(#otpScreen)').style.display = 'block';
+        document.getElementById('otpErr').style.display = 'none';
+        document.getElementById('err1').style.display = 'none';
+        loadZones();
+        goToStep(2);
+    } else {
+        document.getElementById('otpErr').style.display = 'block';
+        document.getElementById('otpErr').textContent = 'Invalid Test OTP. Try 123456!';
+        btn.disabled = false;
+        btn.textContent = 'Verify & Continue →';
+    }
+    return;
+  }
 
   if (!window.confirmationResult) {
      document.getElementById('otpErr').style.display = 'block';
