@@ -744,39 +744,87 @@ async function loadZones() {
 
   btn.textContent = 'Scanning Biometrics...';
 
-  try {
-    if (!window.PublicKeyCredential) {
-      throw new Error("Biometrics not supported on this browser.");
-    }
-    
-    // Simulate WebAuthn Biometric passkey prompt
+  // Helper: build WebAuthn publicKey options
+  function buildPublicKeyOptions(attachment) {
     const challenge = new Uint8Array(32);
     crypto.getRandomValues(challenge);
-    const userId = new Uint8Array(16);
-    crypto.getRandomValues(userId);
+    const rawId = new Uint8Array(16);
+    crypto.getRandomValues(rawId);
 
-    const publicKey = {
+    const opts = {
       challenge: challenge,
-      rp: { name: "GigShield Platform",
-            id: window.location.hostname
-       },
+      rp: { name: "GigShield Platform" },
       user: {
-        id: userId,
+        id: rawId,
         name: phone,
         displayName: name
       },
-      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      pubKeyCredParams: [
+        { type: "public-key", alg: -7 },
+        { type: "public-key", alg: -257 }
+      ],
       authenticatorSelection: {
-         authenticatorAttachment: 'platform',
-        userVerification: "preferred"
+        userVerification: "required"
       },
-      timeout: 60000
+      timeout: 60000,
+      attestation: "none"
     };
 
-    // This triggers the native FaceID/Fingerprint prompt in the OS!
-    await navigator.credentials.create({ publicKey });
-    
-    // On Success: directly proceed to step 2 Since identity is verified
+    // Only set rp.id on non-localhost domains (localhost auto-resolves)
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1' && host !== '') {
+      opts.rp.id = host;
+    }
+
+    // If a specific attachment is requested, add it
+    if (attachment) {
+      opts.authenticatorSelection.authenticatorAttachment = attachment;
+    }
+
+    return opts;
+  }
+
+  // Biometric verification with cross-device fallback chain
+  async function attemptBiometric() {
+    // Check basic WebAuthn support
+    if (!window.PublicKeyCredential) {
+      throw new Error("NOT_SUPPORTED");
+    }
+
+    // Step A: Try platform authenticator first (fingerprint/face on this device)
+    let platformAvailable = false;
+    try {
+      platformAvailable = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch(e) {
+      platformAvailable = false;
+    }
+
+    if (platformAvailable) {
+      try {
+        const opts = buildPublicKeyOptions('platform');
+        await navigator.credentials.create({ publicKey: opts });
+        return true; // Success with platform biometric
+      } catch(platformErr) {
+        console.warn('Platform biometric failed, trying cross-platform...', platformErr.name);
+        // Don't throw — try cross-platform next
+      }
+    }
+
+    // Step B: Try without attachment restriction (allows security keys, phone prompts, etc.)
+    try {
+      const opts = buildPublicKeyOptions(null);
+      await navigator.credentials.create({ publicKey: opts });
+      return true; // Success with any authenticator
+    } catch(crossErr) {
+      console.warn('Cross-platform biometric also failed:', crossErr.name);
+      throw crossErr; // All WebAuthn attempts failed
+    }
+  }
+
+  try {
+    await attemptBiometric();
+
+    // Biometric verified — proceed to step 2
     btn.disabled = false;
     btn.textContent = 'Verify Identity →';
     document.getElementById('err1').style.display = 'none';
@@ -785,11 +833,32 @@ async function loadZones() {
     goToStep(2);
 
   } catch(e) {
-    console.error(e);
-    document.getElementById('err1').style.display = 'block';
-    document.getElementById('err1').textContent = 'Biometric verification failed or was cancelled.';
-    btn.disabled = false;
-    btn.textContent = 'Verify Identity →';
+    console.error('Biometric error:', e);
+
+    // If WebAuthn not supported or user cancelled, offer PIN fallback
+    if (e.message === 'NOT_SUPPORTED' || e.name === 'NotAllowedError' || e.name === 'NotSupportedError' || e.name === 'SecurityError' || e.name === 'AbortError') {
+      // Show a simple confirmation fallback for devices without biometric support
+      const lastFour = phone.slice(-4);
+      const userInput = prompt(`Biometrics unavailable on this device.\n\nTo verify your identity, enter the last 4 digits of your phone number (${phone.slice(0,3)}****${lastFour.slice(-2)}XX):`);
+      
+      if (userInput && userInput.trim() === lastFour) {
+        btn.disabled = false;
+        btn.textContent = 'Verify Identity →';
+        document.getElementById('err1').style.display = 'none';
+        loadZones();
+        goToStep(2);
+      } else {
+        document.getElementById('err1').style.display = 'block';
+        document.getElementById('err1').textContent = 'Identity verification failed. Please enter the correct digits.';
+        btn.disabled = false;
+        btn.textContent = 'Verify Identity →';
+      }
+    } else {
+      document.getElementById('err1').style.display = 'block';
+      document.getElementById('err1').textContent = 'Biometric verification was cancelled. Please try again.';
+      btn.disabled = false;
+      btn.textContent = 'Verify Identity →';
+    }
   }
 }
 
