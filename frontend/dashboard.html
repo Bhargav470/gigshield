@@ -508,7 +508,10 @@ async function setupPushNotifications() {
 applyTranslations(localStorage.getItem('gigshield_lang') || 'en');
 
     // Load worker data from localStorage
-   const API = 'https://gigshield-backend.onrender.com';
+   // Auto-detect API URL: use same origin if served from backend, else use Render
+   const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+     ? `http://${window.location.hostname}:3001`
+     : 'https://gigshield-backend.onrender.com';
 const worker = JSON.parse(localStorage.getItem('gigshield_worker'));
 
 if (!worker) {

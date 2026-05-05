@@ -24,9 +24,24 @@ webpush.setVapidDetails(
 );
 
 
+const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve frontend static files
+app.use(express.static(path.join(__dirname, '..', 'frontend')));
+
+// Health check endpoint (does NOT conflict with static index.html)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'GigShield Backend',
+    version: '3.1',
+    uptime: Math.floor(process.uptime()) + 's',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // DB Connection
 const db = mysql.createPool({
@@ -1029,8 +1044,9 @@ app.get('/api/run-trigger-engine', async (req, res) => {
 
 
 
-app.listen(process.env.PORT, () => {
-  console.log(`🚀 GigShield backend running on port ${process.env.PORT}`);
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 GigShield backend running on port ${PORT}`);
 });
 
 
