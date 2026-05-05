@@ -317,6 +317,7 @@ nav {
   </style>
   <script src="translations.js"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
 </head>
 <body>
@@ -513,6 +514,28 @@ nav {
     function showScreen(n) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById('screen' + n).classList.add('active');
+      if (n === 3) fireConfetti();
+    }
+
+    // — Confetti burst on payout success —
+    function fireConfetti() {
+      if (typeof confetti === 'undefined') return;
+      // First burst — centre
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.55 },
+        colors: ['#F59E0B', '#10B981', '#FCD34D', '#ffffff', '#EF4444']
+      });
+      // Side cannons
+      setTimeout(() => {
+        confetti({ particleCount: 60, angle: 60,  spread: 55, origin: { x: 0 }, colors: ['#F59E0B','#ffffff','#10B981'] });
+        confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#F59E0B','#ffffff','#10B981'] });
+      }, 300);
+      // Final shower
+      setTimeout(() => {
+        confetti({ particleCount: 80, spread: 100, origin: { y: 0.4 }, colors: ['#FCD34D','#10B981','#ffffff'] });
+      }, 700);
     }
 
     function setStep(n, state) {

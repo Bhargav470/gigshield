@@ -230,11 +230,29 @@ nav {
   text-align: center;
   backdrop-filter: blur(16px);
   transition: all 0.3s;
+  position: relative;
 }
 .trigger-card:hover {
   border-color: var(--border2);
   background: var(--surf2);
   transform: translateY(-2px);
+}
+
+/* Live pulse dot */
+.live-dot {
+  position: absolute; top: 14px; right: 14px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: livePulse 2s ease-in-out infinite;
+}
+.live-dot.danger {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.6); opacity: 0.4; }
 }
 
 .trigger-icon { font-size: 32px; margin-bottom: 10px; }
@@ -414,24 +432,28 @@ nav {
     <h2 class="section-title" id="liveMonitorTitle" data-i18n="live_monitors">Live Disruption Monitors</h2>
     <div class="triggers-grid">
       <div class="trigger-card">
+        <div class="live-dot" id="dot-t1"></div>
         <div class="trigger-icon">🌧️</div>
         <div class="trigger-name">Heavy Rainfall</div>
-        <div class="trigger-threshold" id="t1-val">Triggers at >1.5mm/day</div>
+        <div class="trigger-threshold" id="t1-val">Triggers at &gt;1.5mm/day</div>
         <div class="trigger-status status-safe" id="t1">Checking...</div>
       </div>
       <div class="trigger-card">
+        <div class="live-dot" id="dot-t2"></div>
         <div class="trigger-icon">🌡️</div>
         <div class="trigger-name">Extreme Heat</div>
-        <div class="trigger-threshold" id="t2-val">Triggers at >42°C</div>
-       <div class="trigger-status status-safe" id="t2">Checking...</div>
+        <div class="trigger-threshold" id="t2-val">Triggers at &gt;42°C</div>
+        <div class="trigger-status status-safe" id="t2">Checking...</div>
       </div>
       <div class="trigger-card">
+        <div class="live-dot" id="dot-t3"></div>
         <div class="trigger-icon">💨</div>
         <div class="trigger-name">Severe Pollution</div>
-        <div class="trigger-threshold" id="t3-val">Triggers at AQI >300</div>
-       <div class="trigger-status status-safe" id="t3">Checking...</div>
+        <div class="trigger-threshold" id="t3-val">Triggers at AQI &gt;300</div>
+        <div class="trigger-status status-safe" id="t3">Checking...</div>
       </div>
       <div class="trigger-card">
+        <div class="live-dot" id="dot-t4"></div>
         <div class="trigger-icon">🚫</div>
         <div class="trigger-name">Zone Closure</div>
         <div class="trigger-threshold" id="t4-val">Curfew / Strike</div>
@@ -512,6 +534,24 @@ applyTranslations(localStorage.getItem('gigshield_lang') || 'en');
    const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
      ? `http://${window.location.hostname}:3001`
      : 'https://gigshield-backend.onrender.com';
+
+// ── Animated Counter Utility ───────────────────────────────────────────────
+function animateCounter(el, target, prefix, suffix, duration) {
+  if (!el) return;
+  const start = 0;
+  const startTime = performance.now();
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // Ease-out cubic
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(start + (target - start) * eased);
+    el.textContent = (prefix || '') + current.toLocaleString('en-IN') + (suffix || '');
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
 const worker = JSON.parse(localStorage.getItem('gigshield_worker'));
 
 if (!worker) {
@@ -530,9 +570,9 @@ if (!worker) {
   // Nav
   document.getElementById('navName').textContent = worker.name;
 
-  // Stats
-  document.getElementById('statPremium').textContent = worker.premium;
-  document.getElementById('statCoverage').textContent = worker.coverage.toLocaleString('en-IN');
+  // Stats — animated counters
+  animateCounter(document.getElementById('statPremium'),  worker.premium,   '', '', 1200);
+  animateCounter(document.getElementById('statCoverage'), worker.coverage,  '', '', 1500);
   document.getElementById('statZone').textContent = worker.zone + ', ' + (worker.city || 'Chennai');
   document.getElementById('liveMonitorTitle').innerHTML = `Live Disruption Monitors <span style="color:var(--text-muted); font-size:14px; margin-left:8px; font-weight:400;">(${worker.zone})</span>`;
   document.getElementById('t4-val').textContent = `Zone: ${worker.zone}`;
@@ -567,6 +607,7 @@ if (!worker) {
     if (weather.triggers.rain.active) {
       document.getElementById('t1').textContent = 'TRIGGERED';
       document.getElementById('t1').className = 'trigger-status status-danger';
+      document.getElementById('dot-t1').classList.add('danger');
     } else {
       document.getElementById('t1').textContent = `Safe — ${weather.rainfall_mm}mm`;
       document.getElementById('t1').className = 'trigger-status status-safe';
@@ -577,6 +618,7 @@ if (!worker) {
     if (weather.triggers.heat.active) {
       document.getElementById('t2').textContent = 'TRIGGERED';
       document.getElementById('t2').className = 'trigger-status status-danger';
+      document.getElementById('dot-t2').classList.add('danger');
     } else if (weather.temperature_c > 38) {
       document.getElementById('t2').textContent = `Warning — ${weather.temperature_c}°C`;
       document.getElementById('t2').className = 'trigger-status status-warning';
@@ -590,6 +632,7 @@ if (!worker) {
     if (weather.triggers.aqi.active) {
       document.getElementById('t3').textContent = 'TRIGGERED';
       document.getElementById('t3').className = 'trigger-status status-danger';
+      document.getElementById('dot-t3').classList.add('danger');
     } else if (weather.aqi > 150) {
       document.getElementById('t3').textContent = `Warning — AQI ${weather.aqi}`;
       document.getElementById('t3').className = 'trigger-status status-warning';
@@ -689,6 +732,7 @@ async function loadPayoutHistory() {
     if (dbPayouts.length > 0) {
       let total = 0;
       let html = '';
+      // Animate total payout counter once we know the sum
       dbPayouts.forEach(p => {
         total += p.amount;
         const icon = p.claim_type?.includes('Rain') ? '🌧️' :
@@ -711,7 +755,8 @@ async function loadPayoutHistory() {
         `;
       });
       document.getElementById('payoutHistory').innerHTML = html;
-      document.getElementById('statPayouts').textContent = total.toLocaleString('en-IN');
+      // Animate the total payout counter
+      animateCounter(document.getElementById('statPayouts'), total, '', '', 1800);
     }
   } catch (err) {
     console.log('DB payout history failed — using localStorage');

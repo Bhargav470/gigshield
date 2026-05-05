@@ -306,9 +306,48 @@ select option { background: #111; }
 .risk-medium { background: rgba(245,158,11,0.15); color: #F59E0B; }
 .risk-low { background: rgba(16,185,129,0.15); color: #10B981; }
 
-.loading {
-  text-align: center; color: var(--text-muted);
-  padding: 20px; font-size: 14px;
+/* Heatmap glow on zone cards */
+.zone-card.heat-high {
+  border-color: rgba(239,68,68,0.35);
+  box-shadow: 0 0 16px rgba(239,68,68,0.12), inset 0 0 24px rgba(239,68,68,0.04);
+}
+.zone-card.heat-high:hover {
+  border-color: rgba(239,68,68,0.6);
+  box-shadow: 0 0 28px rgba(239,68,68,0.2);
+}
+.zone-card.heat-medium {
+  border-color: rgba(245,158,11,0.3);
+  box-shadow: 0 0 12px rgba(245,158,11,0.1);
+}
+.zone-card.heat-medium:hover {
+  border-color: rgba(245,158,11,0.55);
+  box-shadow: 0 0 24px rgba(245,158,11,0.18);
+}
+.zone-card.heat-low {
+  border-color: rgba(16,185,129,0.25);
+  box-shadow: 0 0 12px rgba(16,185,129,0.08);
+}
+.zone-card.heat-low:hover {
+  border-color: rgba(16,185,129,0.5);
+  box-shadow: 0 0 24px rgba(16,185,129,0.15);
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.skeleton-card {
+  border-radius: 12px;
+  height: 62px;
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.10) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border: 1px solid rgba(255,255,255,0.06);
 }
 
 /* PREMIUM BOX */
@@ -665,13 +704,20 @@ function selectLanguage(lang) {
 async function loadZones() {
   const cityEl = document.getElementById('city');
   const city = cityEl ? cityEl.value : 'Chennai';
+
+  // Show skeleton placeholders while fetching
+  const grid = document.getElementById('zoneGrid');
+  grid.innerHTML = Array(8).fill(
+    '<div class="skeleton-card"></div>'
+  ).join('');
+
   try {
     const res = await fetch(`${API}/api/zones?city=${encodeURIComponent(city)}`);
     const zones = await res.json();
     renderZones(zones);
   } catch (err) {
-    document.getElementById('zoneGrid').innerHTML =
-      '<div class="loading" style="color:#EF4444">Failed to load zones.</div>';
+    grid.innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;color:#EF4444;padding:20px;font-size:14px;">Failed to load zones. Please try again.</div>';
   }
 }
 
@@ -680,11 +726,13 @@ async function loadZones() {
       const grid = document.getElementById('zoneGrid');
       grid.innerHTML = '';
       zones.forEach(zone => {
-        const riskClass = zone.risk_level === 'high' ? 'risk-high' : 
+        const riskClass = zone.risk_level === 'high' ? 'risk-high' :
                           zone.risk_level === 'medium' ? 'risk-medium' : 'risk-low';
+        const heatClass = zone.risk_level === 'high' ? 'heat-high' :
+                          zone.risk_level === 'medium' ? 'heat-medium' : 'heat-low';
         const riskLabel = zone.risk_level.charAt(0).toUpperCase() + zone.risk_level.slice(1) + ' Risk';
         grid.innerHTML += `
-          <div class="zone-card" onclick="selectZone(this, ${zone.id}, '${zone.name}', '${zone.risk_level}')">
+          <div class="zone-card ${heatClass}" onclick="selectZone(this, ${zone.id}, '${zone.name}', '${zone.risk_level}')">
             <div class="zone-name">${zone.name}</div>
             <div class="zone-risk ${riskClass}">${riskLabel}</div>
           </div>
